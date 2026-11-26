@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Se connecter au serveur de test d’Adjamé-Smart sur le réseau Wi-Fi.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Prendre en photo votre boutique, vos produits et votre pièce d’identité.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

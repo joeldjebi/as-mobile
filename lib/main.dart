@@ -16,7 +16,10 @@ final navigatorKey = GlobalKey<NavigatorState>();
 /// Après connexion / déconnexion : on repart de l'écran adapté
 void goHome(BuildContext context) {
   Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => Api.instance.loggedIn ? const HomeScreen() : const AuthScreen()),
+    MaterialPageRoute(
+      builder: (_) =>
+          Api.instance.loggedIn ? const HomeScreen() : const AuthScreen(),
+    ),
     (_) => false,
   );
 }
