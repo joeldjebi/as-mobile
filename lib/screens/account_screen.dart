@@ -4,6 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../addresses.dart';
 import '../api.dart';
+import '../mode.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'auth_screen.dart';
@@ -86,7 +87,10 @@ class _AccountScreenState extends State<AccountScreen> {
         cancelButton: CupertinoActionSheetAction(isDefaultAction: true, onPressed: () => Navigator.pop(c, false), child: const Text('Annuler')),
       ),
     );
-    if (ok == true) await api.logout();
+    if (ok == true) {
+      await AppMode.instance.setSeller(false);
+      await api.logout();
+    }
   }
 
   Future<void> _addAddress() async {
@@ -97,16 +101,14 @@ class _AccountScreenState extends State<AccountScreen> {
   List<Widget> _sellSections() => [
     const SectionTitle('Vendre sur Adjamé-Smart'),
     Group(dividerIndent: 60, children: [
-      for (final s in _shops) ...[
-        Cell(leading: const SettingsIcon(CupertinoIcons.building_2_fill), title: s['name'] as String, value: _shopStatus[s['status']] ?? '', onTap: () => _openShop(Map<String, dynamic>.from(s))),
-        if (s['status'] == 'APPROVED')
-          Cell(
-            leading: const SettingsIcon(CupertinoIcons.tray_full_fill, color: AppColors.accent),
-            title: 'Commandes reçues',
-            subtitle: s['name'] as String,
-            onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => ShopOrdersScreen(shop: s as Map))),
-          ),
-      ],
+      if (_shops.isNotEmpty)
+        Cell(
+          leading: const SettingsIcon(CupertinoIcons.building_2_fill),
+          title: 'Passer en mode boutique',
+          subtitle: _shops.length > 1 ? '${_shops.length} boutiques · commandes, produits, réglages' : '${_shops.first['name']} · ${_shopStatus[_shops.first['status']] ?? ''}',
+          titleColor: AppColors.primary,
+          onTap: () => AppMode.instance.setSeller(true),
+        ),
       Cell(
         leading: const SettingsIcon(CupertinoIcons.plus, color: Color(0xFF2F6F7E)),
         title: _shops.isEmpty ? 'Ouvrir ma boutique' : 'Ouvrir une autre boutique',

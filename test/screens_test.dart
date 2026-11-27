@@ -3,6 +3,7 @@ import 'package:adjame_smart/screens/account_screen.dart';
 import 'package:adjame_smart/screens/auth_screen.dart';
 import 'package:adjame_smart/screens/cart_screen.dart';
 import 'package:adjame_smart/screens/orders_screen.dart';
+import 'package:adjame_smart/screens/seller_shell.dart';
 import 'package:adjame_smart/screens/shop_form_screen.dart';
 import 'package:adjame_smart/theme.dart';
 import 'package:flutter/material.dart';
@@ -72,6 +73,16 @@ void main() {
     expect(find.text('Commande enregistrée'), findsOneWidget);
     expect(find.text('AS-1004 · Awa Pagnes'), findsOneWidget);
     expect(find.text('Voir mes commandes'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('Profil boutique sans boutique : ouvrir la sienne ou revenir au profil client', (t) async {
+    t.view.physicalSize = const Size(390 * 3, 844 * 3);
+    t.view.devicePixelRatio = 3;
+    await t.pumpWidget(app(const SellerShell()));
+    await t.pumpAndSettle();
+    expect(find.text('Ouvrez votre boutique'), findsOneWidget);
+    expect(find.text('Revenir au profil client'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
