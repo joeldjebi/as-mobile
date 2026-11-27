@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'api.dart';
 import 'cart.dart';
 import 'mode.dart';
+import 'realtime.dart';
 import 'screens/home_screen.dart';
 import 'screens/seller_shell.dart';
 import 'theme.dart';
@@ -23,6 +24,8 @@ Future<void> main() async {
     AppMode.instance.load(),
   ]);
   runApp(const AdjameSmartApp());
+  // Temps réel et notifications des commandes (connecté tant que le compte l'est)
+  Realtime.instance.start();
 }
 
 class AdjameSmartApp extends StatelessWidget {
@@ -31,6 +34,8 @@ class AdjameSmartApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Adjamé-Smart',
     debugShowCheckedModeBanner: false,
+    navigatorKey: appNavigator,
+    scaffoldMessengerKey: appMessenger,
     theme: buildTheme(),
     // Une seule app, deux profils : client (sans compte jusqu'à la commande) ou boutique (dernier profil retenu)
     home: ListenableBuilder(

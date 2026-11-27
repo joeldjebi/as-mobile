@@ -4,13 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:live_activities/live_activities.dart';
 
+import 'realtime.dart';
+
 /// Groupe d'apps partagé avec l'extension Live Activity (ios/AsLive)
 const kAppGroup = 'group.ci.adjamesmart.adjameSmart';
 
 /// Suivi de la livraison hors de l'app pendant qu'un livreur VITE apporte la commande :
 /// - iPhone : Live Activity (écran verrouillé et Dynamic Island), compte à rebours de l'arrivée ;
 /// - Android : notification fixe avec avancement.
-/// Mise à jour par l'écran de la commande et par le suivi en direct.
+/// Mise à jour par l'écran de la commande, le suivi en direct et les événements temps réel (lib/realtime.dart).
 class OrderLive {
   OrderLive._();
   static final instance = OrderLive._();
@@ -113,7 +115,7 @@ class OrderLive {
             subtitle,
             if (etaMin != null) 'arrivée ~$etaMin min',
           ].join(' · '),
-          payload: id,
+          payload: 'order:$id',
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               _channel.id,
@@ -141,17 +143,14 @@ class OrderLive {
 
   Future<void> _initAndroid() async {
     if (_androidReady) return;
-    await _local.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      ),
-    );
-    final android = _local
+    // Module de notifications initialisé une seule fois (notification touchée → commande)
+    await Notices.instance.init();
+    await _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >();
-    await android?.createNotificationChannel(_channel);
-    await android?.requestNotificationsPermission();
+        >()
+        ?.createNotificationChannel(_channel);
+    await Notices.instance.askOnce();
     _androidReady = true;
   }
 

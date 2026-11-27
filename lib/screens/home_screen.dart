@@ -1,18 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../api.dart';
 import '../cart.dart';
+import '../realtime.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'account_screen.dart';
 import 'cart_screen.dart';
 import 'catalog_screen.dart';
+import 'orders_screen.dart';
 import 'product_card.dart';
 import 'search_screen.dart';
 import 'shop_page.dart';
 import 'shops_screen.dart';
+import 'track_screen.dart';
 
 /// Onglets : Accueil · Boutiques · Rechercher · Panier · Compte (ouvert à tous, connexion à la commande)
 class HomeScreen extends StatefulWidget {
@@ -315,6 +320,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
   List<dynamic>? _cats;
   Map<String, dynamic>? _home;
   bool _failed = false;
+  final _delivery = GlobalKey<_DeliveryStripState>();
 
   @override
   void initState() {
@@ -793,7 +799,12 @@ class _DiscoverTabState extends State<DiscoverTab> {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          CupertinoSliverRefreshControl(onRefresh: () => _load(fresh: true)),
+          CupertinoSliverRefreshControl(
+            onRefresh: () => Future.wait([
+              _load(fresh: true),
+              _delivery.currentState?.load() ?? Future<void>.value(),
+            ]),
+          ),
           // En-tête de marque
           SliverToBoxAdapter(
             child: Padding(
@@ -822,6 +833,8 @@ class _DiscoverTabState extends State<DiscoverTab> {
               child: Text(_greeting, style: AppText.bodyMuted),
             ),
           ),
+          // Livraison en cours (mise à jour en temps réel)
+          SliverToBoxAdapter(child: _DeliveryStrip(key: _delivery)),
           // Recherche collante
           SliverPersistentHeader(
             pinned: true,
@@ -1016,6 +1029,179 @@ class _DiscoverTabState extends State<DiscoverTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Bande discrète de l'accueil : livraison en cours (la plus récente, « +N » s'il y en a d'autres).
+/// Mise à jour en temps réel, disparaît à la livraison ou à l'annulation.
+class _DeliveryStrip extends StatefulWidget {
+  const _DeliveryStrip({super.key});
+  @override
+  State<_DeliveryStrip> createState() => _DeliveryStripState();
+}
+
+class _DeliveryStripState extends State<_DeliveryStrip> {
+  Map? _order;
+  int _others = 0;
+  int? _eta;
+  void Function()? _unwatch;
+  Timer? _timer;
+
+  static bool _active(Map o) =>
+      o['status'] == 'PAID' || o['status'] == 'IN_DELIVERY';
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+    _unwatch = Realtime.instance.watch(load);
+    Api.instance.addListener(load);
+    // Temps restant rafraîchi doucement pendant la course
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (_order != null) load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _unwatch?.call();
+    Api.instance.removeListener(load);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    if (!Api.instance.loggedIn) {
+      if (mounted && _order != null) setState(() => _order = null);
+      return;
+    }
+    try {
+      final list =
+          (await Api.instance.myOrders()).cast<Map>().where(_active).toList()
+            ..sort(
+              (a, b) => '${b['createdAt']}'.compareTo('${a['createdAt']}'),
+            );
+      final o = list.firstOrNull;
+      int? eta;
+      final d = (o?['delivery'] as Map?) ?? {};
+      if (o != null &&
+          (d['status'] == 'ACCEPTED' || d['status'] == 'PICKED_UP') &&
+          d['trackable'] == true) {
+        try {
+          final t = await Api.instance.trackOrder(o['id'] as String);
+          eta = (t['etaMin'] as num?)?.toInt();
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() {
+        _order = o;
+        _others = list.isEmpty ? 0 : list.length - 1;
+        _eta = eta;
+      });
+    } catch (_) {}
+  }
+
+  String _label(Map o) {
+    final d = (o['delivery'] as Map?)?['status'];
+    if (o['status'] == 'IN_DELIVERY' && d == 'PICKED_UP') {
+      return 'Votre colis est en route';
+    }
+    if (o['status'] == 'IN_DELIVERY' && d == 'ACCEPTED') {
+      return 'Un livreur arrive à la boutique';
+    }
+    return 'Recherche d’un livreur';
+  }
+
+  void _open(Map o) {
+    final d = (o['delivery'] as Map?) ?? {};
+    final id = o['id'] as String;
+    final live = d['status'] == 'ACCEPTED' || d['status'] == 'PICKED_UP';
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => live && d['trackable'] == true
+            ? TrackScreen(orderId: id)
+            : OrderScreen(id: id),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final o = _order;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: o == null
+          ? const SizedBox(width: double.infinity)
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+              child: Pressable(
+                onTap: () => _open(o),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        (o['delivery'] as Map?)?['status'] == 'PICKED_UP'
+                            ? CupertinoIcons.cube_box_fill
+                            : CupertinoIcons.location_fill,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          [
+                            _label(o),
+                            '${o['number']}',
+                            if (_eta != null) '~$_eta min',
+                          ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.subhead.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (_others > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '+$_others',
+                            style: AppText.caption.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 4),
+                      const Icon(
+                        CupertinoIcons.chevron_forward,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../mode.dart';
+import '../realtime.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'orders_screen.dart';
@@ -34,6 +35,7 @@ class _SellerShellState extends State<SellerShell> {
   int _tab = 0;
   int _toConfirm = 0;
   Timer? _timer;
+  void Function()? _unwatch;
 
   Map<String, dynamic>? get _shop =>
       _shops?.where((s) => s['id'] == _shopId).firstOrNull ??
@@ -43,13 +45,24 @@ class _SellerShellState extends State<SellerShell> {
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _countOrders());
+    // Pastille des paiements à confirmer : mise à jour en temps réel
+    _unwatch = Realtime.instance.watch(_countOrders);
+    // Filet de sécurité si la connexion temps réel tombe
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) => _countOrders());
+    Realtime.instance.openShopOrders.addListener(_openOrders);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _unwatch?.call();
+    Realtime.instance.openShopOrders.removeListener(_openOrders);
     super.dispose();
+  }
+
+  /// Notification d'une commande reçue touchée : onglet Commandes
+  void _openOrders() {
+    if (mounted) setState(() => _tab = 1);
   }
 
   Future<void> _load() async {
@@ -312,6 +325,7 @@ class _SellerHomeState extends State<SellerHome> {
   List<Map>? _orders;
   List<Map>? _products;
   late bool _open = widget.shop['isOpen'] != false;
+  void Function()? _unwatch;
 
   Map<String, dynamic> get s => widget.shop;
 
@@ -319,6 +333,14 @@ class _SellerHomeState extends State<SellerHome> {
   void initState() {
     super.initState();
     _load();
+    // Tableau de bord mis à jour en temps réel (commandes reçues)
+    _unwatch = Realtime.instance.watch(_load);
+  }
+
+  @override
+  void dispose() {
+    _unwatch?.call();
+    super.dispose();
   }
 
   Future<void> _load() async {

@@ -11,6 +11,7 @@ import '../api.dart';
 import '../cart.dart';
 import '../delivery.dart';
 import '../order_live.dart';
+import '../realtime.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'track_screen.dart';
@@ -36,6 +37,112 @@ Color orderStatusColor(String? s) => switch (s) {
   'CANCELLED' || 'FAILED' => AppColors.muted,
   _ => AppColors.primary,
 };
+
+/// Pastille de statut lisible d'un coup d'œil : libellé court, icône, couleur de la charte
+(String, IconData, Color, Color) orderBadge(Map o) {
+  const saffronInk = Color(
+    0xFF8A5310,
+  ); // safran foncé, lisible sur fond safran doux
+  final d = (o['delivery'] as Map?)?['status'];
+  return switch (o['status']) {
+    'AWAITING_PAYMENT' => (
+      'À payer',
+      CupertinoIcons.creditcard_fill,
+      saffronInk,
+      AppColors.accentSoft,
+    ),
+    'PAYMENT_DECLARED' => (
+      'Paiement en vérification',
+      CupertinoIcons.clock_fill,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'PAID' => (
+      'Recherche d’un livreur',
+      CupertinoIcons.search,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'IN_DELIVERY' when d == 'PICKED_UP' => (
+      'En route',
+      CupertinoIcons.cube_box_fill,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'IN_DELIVERY' when d == 'ACCEPTED' => (
+      'Livreur vers la boutique',
+      CupertinoIcons.person_fill,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'IN_DELIVERY' => (
+      'Recherche d’un livreur',
+      CupertinoIcons.search,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'DELIVERED' => (
+      'Livrée',
+      CupertinoIcons.checkmark_seal_fill,
+      AppColors.primary,
+      AppColors.primarySoft,
+    ),
+    'FAILED' => (
+      'À reprogrammer',
+      CupertinoIcons.arrow_2_circlepath,
+      AppColors.muted,
+      AppColors.fill,
+    ),
+    'CANCELLED' => (
+      'Annulée',
+      CupertinoIcons.xmark,
+      AppColors.muted,
+      AppColors.fill,
+    ),
+    _ => (
+      orderStatusLabel(o),
+      CupertinoIcons.circle_fill,
+      AppColors.muted,
+      AppColors.fill,
+    ),
+  };
+}
+
+class OrderStatusPill extends StatelessWidget {
+  final Map order;
+  const OrderStatusPill(this.order, {super.key});
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, fg, bg) = orderBadge(order);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 3, 9, 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption.copyWith(
+                color: fg,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 String _date(String? iso) {
   if (iso == null) return '';
@@ -607,11 +714,20 @@ class OrdersScreen extends StatefulWidget {
 class _OrdersScreenState extends State<OrdersScreen> {
   List<dynamic>? _orders;
   bool _failed = false;
+  void Function()? _unwatch;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Mise à jour en temps réel (paiement confirmé, livreur, livraison…)
+    _unwatch = Realtime.instance.watch(_load);
+  }
+
+  @override
+  void dispose() {
+    _unwatch?.call();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -628,9 +744,59 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  /// Sections dans l'ordre d'affichage (sections vides masquées)
+  static const _sections = [
+    ('À payer', ['AWAITING_PAYMENT']),
+    ('En cours', ['PAYMENT_DECLARED', 'PAID', 'IN_DELIVERY']),
+    ('Terminées', ['DELIVERED']),
+    ('Annulées', ['CANCELLED', 'FAILED']),
+  ];
+
+  Widget _row(Map o, {required bool dim}) => Opacity(
+    opacity: dim ? 0.6 : 1,
+    child: Cell(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: NetImage(
+            ((o['items'] as List).firstOrNull as Map?)?['photo'] as String?,
+            width: 48,
+          ),
+        ),
+      ),
+      title: '${o['shopName']}',
+      subtitle: '${o['number']} · ${_date(o['createdAt'] as String?)}',
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            formatMoney(o['goodsTotal'] as num),
+            style: AppText.body.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 4),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 170),
+            child: OrderStatusPill(o),
+          ),
+        ],
+      ),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => OrderScreen(id: o['id'] as String),
+          ),
+        );
+        _load();
+      },
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    final list = _orders ?? [];
+    final list = (_orders ?? []).cast<Map>();
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -661,43 +827,50 @@ class _OrdersScreenState extends State<OrdersScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              sliver: SliverToBoxAdapter(
-                child: Group(
-                  dividerIndent: 76,
-                  children: [
-                    for (final o in list.cast<Map>())
-                      Cell(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: NetImage(
-                              ((o['items'] as List).firstOrNull
-                                      as Map?)?['photo']
-                                  as String?,
-                              width: 48,
-                            ),
-                          ),
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 32),
+              sliver: SliverList.list(
+                children: [
+                  for (final (title, statuses) in _sections)
+                    if (list.any((o) => statuses.contains(o['status']))) ...[
+                      SectionTitle(title),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Group(
+                          dividerIndent: 76,
+                          children: [
+                            for (final o in list.where(
+                              (o) => statuses.contains(o['status']),
+                            ))
+                              _row(
+                                o,
+                                dim:
+                                    title == 'Terminées' || title == 'Annulées',
+                              ),
+                          ],
                         ),
-                        title: '${o['shopName']}',
-                        subtitle:
-                            '${o['number']} · ${_date(o['createdAt'] as String?)}\n${orderStatusLabel(o)}',
-                        value: formatMoney(o['goodsTotal'] as num),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            CupertinoPageRoute(
-                              builder: (_) =>
-                                  OrderScreen(id: o['id'] as String),
-                            ),
-                          );
-                          _load();
-                        },
                       ),
+                    ],
+                  // Statut imprévu : la commande reste visible
+                  if (list.any(
+                    (o) => !_sections.any((x) => x.$2.contains(o['status'])),
+                  )) ...[
+                    const SectionTitle('Autres'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Group(
+                        dividerIndent: 76,
+                        children: [
+                          for (final o in list.where(
+                            (o) => !_sections.any(
+                              (x) => x.$2.contains(o['status']),
+                            ),
+                          ))
+                            _row(o, dim: false),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
         ],
@@ -722,6 +895,7 @@ class _OrderScreenState extends State<OrderScreen> {
   bool _failed = false;
   bool _busy = false;
   Timer? _timer;
+  void Function()? _unwatch;
   final _ref = TextEditingController();
   final _payer = TextEditingController();
 
@@ -729,8 +903,10 @@ class _OrderScreenState extends State<OrderScreen> {
   void initState() {
     super.initState();
     _load();
-    // Suivi en direct (paiement en vérification, livreur en route)
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) {
+    // Mise à jour en temps réel dès que la commande change
+    _unwatch = Realtime.instance.watch(_load, orderId: widget.id);
+    // Filet de sécurité si la connexion temps réel tombe
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (_visible &&
           ['PAYMENT_DECLARED', 'PAID', 'IN_DELIVERY'].contains(_o?['status']))
         _load();
@@ -740,6 +916,7 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _unwatch?.call();
     _ref.dispose();
     _payer.dispose();
     super.dispose();
@@ -1262,12 +1439,18 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
   List<dynamic>? _orders;
   String _tab = 'todo';
   Timer? _timer;
+  void Function()? _unwatch;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    // Commandes reçues mises à jour en temps réel (onglet affiché ; relues à son ouverture sinon)
+    _unwatch = Realtime.instance.watch(() {
+      if (mounted && widget.active) _load();
+    });
+    // Filet de sécurité si la connexion temps réel tombe
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted &&
           widget.active &&
           (ModalRoute.of(context)?.isCurrent ?? true)) {
@@ -1285,6 +1468,7 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _unwatch?.call();
     super.dispose();
   }
 
@@ -1552,18 +1736,28 @@ class OffersCard extends StatefulWidget {
 class _OffersCardState extends State<OffersCard> {
   List<Map> _offers = [];
   Timer? _poll;
+  void Function()? _unwatch;
   String? _busy;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
+    // Nouvelles propositions des livreurs en temps réel
+    _unwatch = Realtime.instance.watch(
+      _load,
+      orderId: widget.orderId,
+      orders: false,
+      offers: true,
+    );
+    // Filet de sécurité si la connexion temps réel tombe
+    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _load());
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _unwatch?.call();
     super.dispose();
   }
 
