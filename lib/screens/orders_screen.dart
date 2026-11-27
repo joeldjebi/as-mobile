@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../addresses.dart';
 import '../api.dart';
 import '../cart.dart';
+import '../delivery.dart';
 import '../order_live.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -102,6 +103,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Map<String, dynamic>? _quote;
   String? _quoteError;
   bool _busy = false;
+  String _vehicle = 'MOTO';
+  String _speed = 'STANDARD';
 
   List<Map> get _addresses =>
       ((api.user?['addresses'] as List?) ?? []).cast<Map>();
@@ -136,6 +139,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final q = await api.orderQuote({
         'items': _items,
         'addressId': ?_addressId,
+        'vehicleType': _vehicle,
+        'speed': _speed,
       });
       if (mounted) setState(() => _quote = q);
     } catch (e) {
@@ -162,6 +167,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final r = await api.checkout({
         'items': _items,
         'addressId': _addressId,
+        'vehicleType': _vehicle,
+        'speed': _speed,
         'recipientName': _name.text.trim(),
         'recipientPhone': phone,
         if (_note.text.trim().isNotEmpty) 'note': _note.text.trim(),
@@ -181,6 +188,72 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Type de livraison : engin (si plusieurs) puis délai, avec le prix estimé de chacun
+  List<Widget> _deliveryPicker(Map<String, dynamic>? q) {
+    final opts = ((q?['deliveryOptions'] as List?) ?? []).cast<Map>();
+    if (opts.isEmpty) return const [];
+    final vs = vehicles.keys
+        .where((v) => opts.any((o) => o['vehicleType'] == v))
+        .toList();
+    num? price(String sp) =>
+        opts
+                .where((o) => o['vehicleType'] == _vehicle && o['speed'] == sp)
+                .firstOrNull?['price']
+            as num?;
+    void choose({String? v, String? sp}) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _vehicle = v ?? _vehicle;
+        _speed = sp ?? _speed;
+      });
+      _loadQuote();
+    }
+
+    return [
+      const SectionTitle('Type de livraison'),
+      if (vs.length > 1) ...[
+        CupertinoSlidingSegmentedControl<String>(
+          groupValue: _vehicle,
+          children: {
+            for (final v in vs)
+              v: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(vehicles[v]!.$1),
+              ),
+          },
+          onValueChanged: (v) => v == null ? null : choose(v: v),
+        ),
+        const SizedBox(height: 10),
+      ],
+      Group(
+        dividerIndent: 48,
+        children: [
+          for (final sp in speeds.keys)
+            if (price(sp) != null)
+              Cell(
+                leading: Icon(
+                  _speed == sp
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : CupertinoIcons.circle,
+                  size: 22,
+                  color: _speed == sp ? AppColors.primary : AppColors.faint,
+                ),
+                title: speeds[sp]!.$1,
+                subtitle: speeds[sp]!.$2,
+                trailing: Text(
+                  '≈ ${formatMoney(price(sp)!)}',
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                ),
+                onTap: () => choose(sp: sp),
+              ),
+        ],
+      ),
+      SectionFooter(
+        '${vehicles[_vehicle]!.$2}. Payée en espèces au livreur. Un livreur peut proposer un autre prix : vous acceptez, refusez ou faites votre offre.',
+      ),
+    ];
   }
 
   Widget _row(String label, Widget field) => Padding(
@@ -256,6 +329,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ],
                     ),
+                    ..._deliveryPicker(q),
                     const SectionTitle('Destinataire'),
                     Group(
                       children: [
@@ -878,7 +952,12 @@ class _OrderScreenState extends State<OrderScreen> {
         d['trackable'] == true &&
         ['ACCEPTED', 'PICKED_UP'].contains(d['status']);
     return [
-      const SectionTitle('Livraison VITE'),
+      // Recherche d'un livreur : propositions de prix à accepter, refuser ou négocier
+      if (o['status'] == 'IN_DELIVERY' && d['status'] == 'PENDING')
+        OffersCard(orderId: o['id'] as String, onAccepted: _load),
+      SectionTitle(
+        'Livraison VITE · ${deliveryLabel(o['vehicleType'], o['speed'])}',
+      ),
       // Suivi en direct dans l'app : carte, livreur, temps restant
       if (live) ...[
         LiveTrackCard(orderId: o['id'] as String),
@@ -1452,6 +1531,237 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
                 itemBuilder: (_, i) => _card(list[i]),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Négociation du prix de livraison
+// ============================================================================
+
+/// Propositions des livreurs VITE pendant la recherche : accepter, refuser ou faire son offre (2 min chacune)
+class OffersCard extends StatefulWidget {
+  final String orderId;
+  final VoidCallback onAccepted;
+  const OffersCard({
+    super.key,
+    required this.orderId,
+    required this.onAccepted,
+  });
+  @override
+  State<OffersCard> createState() => _OffersCardState();
+}
+
+class _OffersCardState extends State<OffersCard> {
+  List<Map> _offers = [];
+  Timer? _poll;
+  Timer? _tick;
+  String? _busy;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _offers.isNotEmpty) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final r = await Api.instance.orderOffers(widget.orderId);
+      if (mounted) setState(() => _offers = r.cast<Map>());
+    } catch (_) {}
+  }
+
+  int _left(Map o) => DateTime.parse(
+    o['expiresAt'] as String,
+  ).difference(DateTime.now()).inSeconds;
+
+  Future<void> _act(Map o, String action, {int? price}) async {
+    setState(() => _busy = o['id'] as String);
+    try {
+      await Api.instance.answerOffer(
+        widget.orderId,
+        o['id'] as String,
+        action,
+        price: price,
+      );
+      HapticFeedback.mediumImpact();
+      if (!mounted) return;
+      if (action == 'accept') {
+        showInfo(
+          context,
+          '${o['driver']['name']} arrive pour ${formatMoney(o['price'] as num)}',
+        );
+        widget.onAccepted();
+      } else if (action == 'counter') {
+        showInfo(context, 'Votre offre est envoyée à ${o['driver']['name']}');
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = null);
+      _load();
+    }
+  }
+
+  Future<void> _counter(Map o) async {
+    final min = (o['minCounter'] as num).toInt();
+    final max = (o['price'] as num).toInt() - 50;
+    final c = TextEditingController(
+      text: '${(((min + max) / 2) / 50).round() * 50}',
+    );
+    final value = await showCupertinoDialog<String>(
+      context: context,
+      builder: (d) => CupertinoAlertDialog(
+        title: const Text('Votre offre'),
+        content: Column(
+          children: [
+            const SizedBox(height: 6),
+            Text(
+              '${o['driver']['name']} propose ${formatMoney(o['price'] as num)}. Proposez entre ${formatMoney(min)} et ${formatMoney(max)}.',
+            ),
+            const SizedBox(height: 12),
+            CupertinoTextField(
+              controller: c,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              suffix: const Padding(
+                padding: EdgeInsets.only(right: 10),
+                child: Text('F'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(d),
+            child: const Text('Annuler'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(d, c.text),
+            child: const Text('Envoyer'),
+          ),
+        ],
+      ),
+    );
+    final price = int.tryParse((value ?? '').replaceAll(RegExp(r'\D'), ''));
+    if (price != null) await _act(o, 'counter', price: price);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final live = _offers.where((o) => _left(o) > 0).toList();
+    if (live.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionTitle('Propositions des livreurs'),
+        for (final o in live) _tile(o),
+        const SectionFooter(
+          'Un livreur propose un autre prix que l’estimation. Acceptez, refusez ou faites votre offre : la course reste proposée aux autres livreurs.',
+        ),
+      ],
+    );
+  }
+
+  Widget _tile(Map o) {
+    final left = _left(o);
+    final countered = o['counterPrice'] != null;
+    final canCounter =
+        !countered && (o['price'] as num) - 50 >= (o['minCounter'] as num);
+    final busy = _busy == o['id'];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const SettingsIcon(PhosphorIconsFill.moped),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${o['driver']['name']}',
+                      style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      [
+                        if (o['etaMin'] != null)
+                          'à ~${o['etaMin']} min de la boutique',
+                        '${left ~/ 60}:${(left % 60).toString().padLeft(2, '0')} pour répondre',
+                      ].join(' · '),
+                      style: AppText.caption,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatMoney(o['price'] as num),
+                style: AppText.price.copyWith(fontSize: 19),
+              ),
+            ],
+          ),
+          if (countered) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Votre offre : ${formatMoney(o['counterPrice'] as num)} · en attente de la réponse du livreur',
+              style: AppText.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              TextButton(
+                onPressed: busy ? null : () => _act(o, 'decline'),
+                child: const Text(
+                  'Refuser',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ),
+              if (canCounter)
+                TextButton(
+                  onPressed: busy ? null : () => _counter(o),
+                  child: const Text('Faire une offre'),
+                ),
+              const Spacer(),
+              FilledButton(
+                onPressed: busy ? null : () => _act(o, 'accept'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: busy
+                    ? const CupertinoActivityIndicator(color: Colors.white)
+                    : Text('Accepter ${formatMoney(o['price'] as num)}'),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -224,6 +224,21 @@ class Api extends ChangeNotifier {
       await _request('GET', '/geo/reverse?lat=$lat&lng=$lng')
           as Map<String, dynamic>?;
 
+  /// Propositions des livreurs pendant la recherche, et réponses du client
+  Future<List<dynamic>> orderOffers(String id) async =>
+      (await _request('GET', '/orders/mine/$id/offers') as List<dynamic>?) ??
+      [];
+  Future<dynamic> answerOffer(
+    String id,
+    String offerId,
+    String action, {
+    int? price,
+  }) => _request(
+    'POST',
+    '/orders/mine/$id/offers/$offerId/$action',
+    price == null ? null : {'price': price},
+  );
+
   /// Suivi en direct de la course VITE (livreur, itinéraire, temps restant)
   Future<Map<String, dynamic>> trackOrder(String id) async =>
       await _request('GET', '/orders/mine/$id/track') as Map<String, dynamic>;
