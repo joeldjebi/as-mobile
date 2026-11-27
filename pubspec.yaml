@@ -66,6 +66,22 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Polices intégrées (licence SIL OFL 1.1, voir assets/fonts/*-OFL.txt)
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    # Titres éditoriaux
+    - family: DMSerif
+      fonts:
+        - asset: assets/fonts/DMSerifDisplay-Regular.ttf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

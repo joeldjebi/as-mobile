@@ -138,10 +138,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text(
-                'Catégorie',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
+              child: Text('Catégorie', style: AppText.headline),
             ),
             for (final cat in sorted) ...[
               ListTile(

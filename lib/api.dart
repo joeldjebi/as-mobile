@@ -30,7 +30,8 @@ const _generic = 'Une erreur est survenue. Réessayez dans un instant.';
 const _offline =
     'Impossible de joindre Adjamé-Smart. Vérifiez votre connexion.';
 
-class Api {
+/// Session : écoutable (l'onglet Compte se met à jour à la connexion / déconnexion)
+class Api extends ChangeNotifier {
   Api._();
   static final instance = Api._();
 
@@ -84,6 +85,7 @@ class Api {
     _token = res['token'] as String;
     user = res['user'] as Map<String, dynamic>;
     (await SharedPreferences.getInstance()).setString('token', _token!);
+    notifyListeners();
   }
 
   Future<void> login(String phone, String password) async => _session(
@@ -100,11 +102,15 @@ class Api {
           'password': password,
         }),
       );
-  Future<void> refreshMe() async => user = await _request('GET', '/auth/me');
+  Future<void> refreshMe() async {
+    user = await _request('GET', '/auth/me');
+    notifyListeners();
+  }
   Future<void> logout() async {
     _token = null;
     user = null;
     (await SharedPreferences.getInstance()).remove('token');
+    notifyListeners();
   }
 
   Future<void> addAddress(Map<String, dynamic> a) async =>

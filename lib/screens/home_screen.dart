@@ -2,68 +2,110 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../api.dart';
+import '../cart.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'account_screen.dart';
+import 'cart_screen.dart';
 import 'product_card.dart';
 import 'search_screen.dart';
 import 'shop_page.dart';
 
-/// Accueil : onglets Découvrir (catégories, boutiques) et Compte
+/// Structure : Accueil · Rechercher · Panier · Compte (ouvert à tous, connexion à la commande)
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialTab;
+  const HomeScreen({super.key, this.initialTab = 0});
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _tab = 0;
+class HomeScreenState extends State<HomeScreen> {
+  late int _tab = widget.initialTab;
+  void select(int i) => setState(() => _tab = i);
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: IndexedStack(
-        index: _tab,
-        children: const [DiscoverTab(), AccountScreen()],
+    body: IndexedStack(index: _tab, children: [
+      DiscoverTab(onSearch: () => select(1)),
+      const SearchScreen(embedded: true),
+      CartScreen(onBrowse: () => select(0)),
+      const AccountScreen(),
+    ]),
+    bottomNavigationBar: _NavBar(index: _tab, onTap: select),
+  );
+}
+
+class _NavBar extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onTap;
+  const _NavBar({required this.index, required this.onTap});
+
+  Widget _item(int i, IconData icon, IconData active, String label, {int badge = 0}) {
+    final on = index == i;
+    return Expanded(
+      child: Pressable(
+        onTap: () => onTap(i),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Stack(clipBehavior: Clip.none, children: [
+              Icon(on ? active : icon, size: 25, color: on ? AppColors.ink : AppColors.faint),
+              if (badge > 0)
+                Positioned(
+                  right: -9,
+                  top: -5,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.background, width: 1.5)),
+                    child: Text('$badge', textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: on ? FontWeight.w600 : FontWeight.w500, color: on ? AppColors.ink : AppColors.faint)),
+          ]),
+        ),
       ),
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _tab,
-      onDestinationSelected: (i) => setState(() => _tab = i),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(PhosphorIconsBold.storefront),
-          selectedIcon: Icon(PhosphorIconsFill.storefront),
-          label: 'Découvrir',
-        ),
-        NavigationDestination(
-          icon: Icon(PhosphorIconsBold.userCircle),
-          selectedIcon: Icon(PhosphorIconsFill.userCircle),
-          label: 'Compte',
-        ),
-      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(color: AppColors.background, border: Border(top: BorderSide(color: AppColors.line))),
+    padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+    child: ListenableBuilder(
+      listenable: Cart.instance,
+      builder: (_, _) => Row(children: [
+        _item(0, PhosphorIconsRegular.house, PhosphorIconsFill.house, 'Accueil'),
+        _item(1, PhosphorIconsRegular.magnifyingGlass, PhosphorIconsBold.magnifyingGlass, 'Rechercher'),
+        _item(2, PhosphorIconsRegular.handbag, PhosphorIconsFill.handbag, 'Panier', badge: Cart.instance.count),
+        _item(3, PhosphorIconsRegular.user, PhosphorIconsFill.user, 'Compte'),
+      ]),
     ),
   );
 }
 
 /// Icône d'une catégorie (nom Phosphor envoyé par l'API)
 IconData categoryIcon(String? name) => switch (name) {
-  'deviceMobile' => PhosphorIconsFill.deviceMobile,
-  'television' => PhosphorIconsFill.television,
-  'dress' => PhosphorIconsFill.dress,
-  'tShirt' => PhosphorIconsFill.tShirt,
-  'sneaker' => PhosphorIconsFill.sneaker,
-  'sparkle' => PhosphorIconsFill.sparkle,
-  'cookingPot' => PhosphorIconsFill.cookingPot,
-  'basket' => PhosphorIconsFill.basket,
-  'baby' => PhosphorIconsFill.baby,
-  'wrench' => PhosphorIconsFill.wrench,
-  'hammer' => PhosphorIconsFill.hammer,
-  'notebook' => PhosphorIconsFill.notebook,
-  _ => PhosphorIconsFill.tag,
+  'deviceMobile' => PhosphorIconsLight.deviceMobile,
+  'television' => PhosphorIconsLight.television,
+  'dress' => PhosphorIconsLight.dress,
+  'tShirt' => PhosphorIconsLight.tShirt,
+  'sneaker' => PhosphorIconsLight.sneaker,
+  'sparkle' => PhosphorIconsLight.sparkle,
+  'cookingPot' => PhosphorIconsLight.cookingPot,
+  'basket' => PhosphorIconsLight.basket,
+  'baby' => PhosphorIconsLight.baby,
+  'wrench' => PhosphorIconsLight.wrench,
+  'hammer' => PhosphorIconsLight.hammer,
+  'notebook' => PhosphorIconsLight.notebook,
+  _ => PhosphorIconsLight.tag,
 };
 
 class DiscoverTab extends StatefulWidget {
-  const DiscoverTab({super.key});
+  final VoidCallback onSearch;
+  const DiscoverTab({super.key, required this.onSearch});
   @override
   State<DiscoverTab> createState() => _DiscoverTabState();
 }
@@ -71,6 +113,7 @@ class DiscoverTab extends StatefulWidget {
 class _DiscoverTabState extends State<DiscoverTab> {
   List<dynamic>? _cats;
   Map<String, dynamic>? _home;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -80,215 +123,155 @@ class _DiscoverTabState extends State<DiscoverTab> {
 
   Future<void> _load() async {
     try {
-      final r = await Future.wait([
-        Api.instance.categories(),
-        Api.instance.home(),
-      ]);
-      if (mounted) {
-        setState(() {
-          _cats = r[0] as List;
-          _home = r[1] as Map<String, dynamic>;
-        });
-      }
+      final r = await Future.wait([Api.instance.categories(), Api.instance.home()]);
+      if (mounted) setState(() { _cats = r[0] as List; _home = r[1] as Map<String, dynamic>; _failed = false; });
     } catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted) setState(() => _failed = true);
     }
   }
 
-  void _open(Widget w) =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => w));
+  void _open(Widget w) => Navigator.push(context, MaterialPageRoute(builder: (_) => w));
 
-  Widget _shopTile(Map s) => SizedBox(
-    width: 150,
-    child: InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () => _open(ShopPage(slug: s['slug'] as String)),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 10,
-              child: (s['storefrontUrl'] ?? s['logoUrl']) != null
-                  ? Image.network(
-                      photoUrl((s['storefrontUrl'] ?? s['logoUrl']) as String),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          Container(color: AppColors.background),
-                    )
-                  : Container(
-                      color: AppColors.background,
-                      child: const Icon(
-                        PhosphorIconsFill.storefront,
-                        color: AppColors.primary,
-                      ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s['name'] as String,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    [
-                      if (s['type'] == 'GROSSISTE') 'Grossiste',
-                      s['market'],
-                    ].whereType<String>().join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _shopCard(Map s) => Pressable(
+    onTap: () => _open(ShopPage(slug: s['slug'] as String)),
+    child: SizedBox(
+      width: 220,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(borderRadius: BorderRadius.circular(20), child: AspectRatio(aspectRatio: 4 / 3, child: NetImage((s['storefrontUrl'] ?? s['logoUrl']) as String?, placeholder: PhosphorIconsLight.storefront))),
+        const SizedBox(height: 10),
+        Text(s['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.title.copyWith(fontSize: 15.5)),
+        const SizedBox(height: 2),
+        Text([if (s['type'] == 'GROSSISTE') 'Grossiste', s['market']].whereType<String>().join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption),
+      ]),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
-    final name = (Api.instance.user?['name'] as String? ?? '').split(' ').first;
     final fresh = (_home?['newProducts'] as List?) ?? [];
     final popular = (_home?['popularProducts'] as List?) ?? [];
     final featured = (_home?['featuredShops'] as List?) ?? [];
+    final name = (Api.instance.user?['name'] as String?)?.split(' ').first;
     return RefreshIndicator(
+      color: AppColors.ink,
       onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
-          Text(
-            'Bonjour $name',
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-          ),
-          const Text(
-            'Que cherchez-vous à Adjamé aujourd’hui ?',
-            style: TextStyle(color: AppColors.muted),
-          ),
-          const SizedBox(height: 12),
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _open(const SearchScreen(autofocus: true)),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    PhosphorIconsBold.magnifyingGlass,
-                    color: AppColors.muted,
+      child: CustomScrollView(slivers: [
+        SliverToBoxAdapter(
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(name == null ? 'ADJAMÉ-SMART' : 'BONJOUR ${name.toUpperCase()}', style: AppText.overline),
+                const SizedBox(height: 8),
+                const Text('Le marché d’Adjamé,\nlivré chez vous.', style: AppText.display),
+                const SizedBox(height: 20),
+                Pressable(
+                  onTap: widget.onSearch,
+                  child: Container(
+                    height: 54,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(28), border: Border.all(color: AppColors.line)),
+                    child: const Row(children: [
+                      Icon(PhosphorIconsRegular.magnifyingGlass, color: AppColors.ink, size: 21),
+                      SizedBox(width: 12),
+                      Expanded(child: Text('Pagnes, téléphones, chaussures…', style: TextStyle(fontFamily: 'Inter', color: AppColors.faint, fontSize: 15))),
+                    ]),
                   ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Rechercher un produit, une boutique…',
-                    style: TextStyle(color: AppColors.muted),
+                ),
+              ]),
+            ),
+          ),
+        ),
+        if (_failed)
+          SliverToBoxAdapter(child: EmptyState(icon: PhosphorIconsLight.wifiSlash, title: 'Connexion impossible', text: 'Vérifiez votre connexion puis réessayez.', action: 'Réessayer', onAction: _load))
+        else ...[
+          // Catégories
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 128,
+              child: _cats == null
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.ink, strokeWidth: 2))
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _cats!.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 14),
+                      itemBuilder: (_, i) {
+                        final c = _cats![i] as Map;
+                        return Pressable(
+                          onTap: () => _open(SearchScreen(categoryId: c['id'] as String, categoryName: c['name'] as String)),
+                          child: SizedBox(
+                            width: 74,
+                            child: Column(children: [
+                              Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle, border: Border.all(color: AppColors.line)),
+                                child: Icon(categoryIcon(c['icon'] as String?), color: AppColors.ink, size: 26),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(c['name'] as String, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(color: AppColors.ink, fontWeight: FontWeight.w500, fontSize: 12, height: 1.25)),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+          // Bandeau éditorial
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(24)),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('LIVRAISON LETO', style: AppText.overline.copyWith(color: Colors.white70)),
+                      const SizedBox(height: 6),
+                      Text('Commandez dans plusieurs boutiques, recevez tout chez vous.', style: AppText.headline.copyWith(color: Colors.white, fontSize: 21)),
+                    ]),
                   ),
-                ],
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+                    child: const Icon(PhosphorIconsFill.moped, color: Colors.white, size: 28),
+                  ),
+                ]),
               ),
             ),
           ),
-          const SectionTitle('Catégories'),
-          if (_cats == null)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else
-            GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.82,
-              children: [
-                for (final c in _cats!)
-                  InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => _open(
-                      SearchScreen(
-                        categoryId: c['id'] as String,
-                        categoryName: c['name'] as String,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            categoryIcon(c['icon'] as String?),
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          c['name'] as String,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
           if (featured.isNotEmpty) ...[
-            const SectionTitle('Boutiques à la une'),
-            SizedBox(
-              height: 160,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: featured.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (_, i) => _shopTile(featured[i] as Map),
+            const SliverToBoxAdapter(child: SectionHeader('Boutiques à la une')),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 232,
+                child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 20), scrollDirection: Axis.horizontal, itemCount: featured.length, separatorBuilder: (_, _) => const SizedBox(width: 14), itemBuilder: (_, i) => _shopCard(featured[i] as Map)),
               ),
             ),
           ],
           if (fresh.isNotEmpty) ...[
-            const SectionTitle('Nouveautés'),
-            SizedBox(
-              height: 250,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: fresh.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (_, i) => ProductCard(fresh[i] as Map, width: 160),
+            SliverToBoxAdapter(child: SectionHeader('Nouveautés', action: 'Tout voir', onAction: () => _open(const SearchScreen(sort: 'new')))),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 300,
+                child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 20), scrollDirection: Axis.horizontal, itemCount: fresh.length, separatorBuilder: (_, _) => const SizedBox(width: 14), itemBuilder: (_, i) => ProductCard(fresh[i] as Map, width: 170)),
               ),
             ),
           ],
           if (popular.isNotEmpty) ...[
-            const SectionTitle('Populaires'),
-            ProductGrid(popular.take(6).toList()),
+            SliverToBoxAdapter(child: SectionHeader('Les plus vus', action: 'Tout voir', onAction: () => _open(const SearchScreen(sort: 'popular')))),
+            SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 20), sliver: ProductSliverGrid(popular.take(6).toList())),
           ],
           if (_home != null && fresh.isEmpty)
-            const StatusBanner(
-              icon: PhosphorIconsFill.storefront,
-              color: AppColors.primary,
-              title: 'Bientôt ici',
-              text: 'Les premières boutiques d’Adjamé ajoutent leurs produits.',
-            ),
+            const SliverToBoxAdapter(child: EmptyState(icon: PhosphorIconsLight.storefront, title: 'Bientôt ici', text: 'Les premières boutiques d’Adjamé ajoutent leurs produits.')),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
-      ),
+      ]),
     );
   }
 }
