@@ -95,8 +95,8 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
       if (phone.isNotEmpty) 'phone': phone,
       'categoryIds': _cats.toList(),
       'prepayPercent': _prepay,
-      'pispiAlias': _alias.text.trim(),
-      'payoutMode': _payout,
+      // Encaissement direct : seulement si l'équipe Adjamé-Smart l'a autorisé pour cette boutique
+      if (_s?['canDirectPayout'] == true) ...{'pispiAlias': _alias.text.trim(), 'payoutMode': _payout},
       'hours': {
         'open': _open,
         'close': _close,
@@ -488,6 +488,14 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
             PrepayPicker(value: _prepay, onChanged: (v) => setState(() => _prepay = v ?? 100)),
             const SectionFooter('Valeur par défaut de vos produits ; vous pouvez la changer produit par produit.'),
             const SectionTitle('Encaissement des ventes'),
+            if (_s?['canDirectPayout'] != true)
+              const StatusBanner(
+                icon: CupertinoIcons.checkmark_shield_fill,
+                color: AppColors.primary,
+                title: 'Adjamé-Smart encaisse pour vous',
+                text: 'Les clients paient Adjamé-Smart, qui vérifie et confirme chaque paiement (la livraison part aussitôt), puis vous reverse le montant. Vous n’avez rien à confirmer.',
+              )
+            else ...[
             Group(children: [
               Padding(
                 padding: const EdgeInsets.all(12),
@@ -509,6 +517,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
             SectionFooter(_payout == 'DIRECT'
                 ? 'Le client vous paie directement. Vous confirmez la réception dans « Commandes reçues » : la livraison VITE part aussitôt.'
                 : 'Le client paie Adjamé-Smart, qui confirme la réception puis vous reverse le montant.'),
+            ],
             const SectionTitle('Photos de la boutique'),
             Row(
               children: [
