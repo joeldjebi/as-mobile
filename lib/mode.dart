@@ -8,11 +8,15 @@ class AppMode extends ChangeNotifier {
 
   bool seller = false;
 
-  Future<void> load() async => seller = (await SharedPreferences.getInstance()).getString('mode') == 'seller';
+  Future<void> load() async => seller =
+      (await SharedPreferences.getInstance()).getString('mode') == 'seller';
 
   Future<void> setSeller(bool value) async {
     seller = value;
-    (await SharedPreferences.getInstance()).setString('mode', value ? 'seller' : 'client');
+    (await SharedPreferences.getInstance()).setString(
+      'mode',
+      value ? 'seller' : 'client',
+    );
     notifyListeners();
   }
 }

@@ -82,8 +82,18 @@ class _ShopPageState extends State<ShopPage> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: on ? AppColors.primary : AppColors.primarySoft, borderRadius: BorderRadius.circular(17)),
-        child: Text(n == null ? label : '$label  $n', style: AppText.subhead.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on ? Colors.white : AppColors.primary)),
+        decoration: BoxDecoration(
+          color: on ? AppColors.primary : AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        child: Text(
+          n == null ? label : '$label  $n',
+          style: AppText.subhead.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: on ? Colors.white : AppColors.primary,
+          ),
+        ),
       ),
     );
   }
@@ -92,14 +102,33 @@ class _ShopPageState extends State<ShopPage> {
   Widget build(BuildContext context) {
     final s = _s;
     final top = MediaQuery.of(context).padding.top;
-    final back = Positioned(top: top + 6, left: 16, child: RoundIconButton(CupertinoIcons.chevron_back, onTap: () => Navigator.pop(context)));
+    final back = Positioned(
+      top: top + 6,
+      left: 16,
+      child: RoundIconButton(
+        CupertinoIcons.chevron_back,
+        onTap: () => Navigator.pop(context),
+      ),
+    );
     if (s == null) {
       return Scaffold(
         backgroundColor: AppColors.surface,
-        body: Stack(children: [
-          Center(child: _failed ? EmptyState(icon: CupertinoIcons.wifi_slash, title: 'Boutique indisponible', text: 'Vérifiez votre connexion Internet puis réessayez.', action: 'Réessayer', onAction: _load) : const Loader()),
-          back,
-        ]),
+        body: Stack(
+          children: [
+            Center(
+              child: _failed
+                  ? EmptyState(
+                      icon: CupertinoIcons.wifi_slash,
+                      title: 'Boutique indisponible',
+                      text: 'Vérifiez votre connexion Internet puis réessayez.',
+                      action: 'Réessayer',
+                      onAction: _load,
+                    )
+                  : const Loader(),
+            ),
+            back,
+          ],
+        ),
       );
     }
     final hours = s['hours'] as Map?;
@@ -111,101 +140,213 @@ class _ShopPageState extends State<ShopPage> {
       backgroundColor: AppColors.surface,
       body: NotificationListener<ScrollNotification>(
         onNotification: (n) => loadMoreOnScroll(n, c),
-        child: CustomScrollView(physics: const BouncingScrollPhysics(), slivers: [
-          SliverToBoxAdapter(
-            child: Stack(clipBehavior: Clip.none, children: [
-              AspectRatio(
-                aspectRatio: 16 / 10,
-                child: s['storefrontUrl'] == null
-                    ? WaxPattern(seed: (s['name'] as String).length)
-                    : NetImage(s['storefrontUrl'] as String?, width: 430, placeholder: CupertinoIcons.building_2_fill),
-              ),
-              back,
-              Positioned(
-                left: 20,
-                bottom: -34,
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.surface, width: 3), boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))]),
-                  child: ClipRRect(borderRadius: BorderRadius.circular(15), child: NetImage(s['logoUrl'] as String?, width: 76, placeholder: CupertinoIcons.building_2_fill)),
-                ),
-              ),
-            ]),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 46, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(s['name'] as String, style: AppText.title1),
-                const SizedBox(height: 2),
-                Text([s['type'] == 'GROSSISTE' ? 'Grossiste' : 'Boutique', s['market'], '$count ${count > 1 ? 'produits' : 'produit'}'].whereType<String>().join(' · '), style: AppText.bodyMuted),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Icon(CupertinoIcons.circle_fill, size: 9, color: open ? AppColors.success : AppColors.faint),
-                  const SizedBox(width: 6),
-                  Text(open ? 'Ouverte' : 'Fermée', style: AppText.label.copyWith(color: open ? AppColors.success : AppColors.muted)),
-                  if (hours != null) Flexible(child: Text('  ·  ${hours['open']} – ${hours['close']}', overflow: TextOverflow.ellipsis, style: AppText.bodyMuted)),
-                ]),
-                if ((s['description'] ?? '').toString().isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(s['description'] as String, maxLines: 4, overflow: TextOverflow.ellipsis, style: AppText.subhead.copyWith(height: 1.4)),
-                ],
-                const SizedBox(height: 18),
-                Group(color: AppColors.surfaceAlt, dividerIndent: 52, children: [
-                  Cell(leading: const Icon(CupertinoIcons.location_fill, color: AppColors.primary, size: 22), title: (s['location'] as String?) ?? 'Adjamé', subtitle: s['market'] as String?),
-                  if (hours != null) Cell(leading: const Icon(CupertinoIcons.clock_fill, color: AppColors.primary, size: 22), title: '${hours['open']} – ${hours['close']}', subtitle: (hours['days'] as List).map((d) => _days[d as int]).join(', ')),
-                  if (s['phone'] != null)
-                    Cell(
-                      leading: const Icon(CupertinoIcons.phone_fill, color: AppColors.primary, size: 22),
-                      title: formatPhone(s['phone'] as String),
-                      subtitle: 'Appeler la boutique',
-                      trailing: const Icon(CupertinoIcons.arrow_up_right, size: 16, color: AppColors.faint),
-                      onTap: () => launchUrl(Uri.parse('tel:${s['phone']}')),
-                    ),
-                ]),
-                const SizedBox(height: 22),
-                if (count > 8)
-                  CupertinoSearchTextField(
-                    controller: _q,
-                    placeholder: 'Rechercher dans la boutique',
-                    style: AppText.body,
-                    onChanged: (_) {
-                      _debounce?.cancel();
-                      _debounce = Timer(const Duration(milliseconds: 300), _apply);
-                    },
-                    onSuffixTap: () {
-                      _q.clear();
-                      _apply();
-                    },
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 10,
+                    child: s['storefrontUrl'] == null
+                        ? WaxPattern(seed: (s['name'] as String).length)
+                        : NetImage(
+                            s['storefrontUrl'] as String?,
+                            width: 430,
+                            placeholder: CupertinoIcons.building_2_fill,
+                          ),
                   ),
-              ]),
+                  back,
+                  Positioned(
+                    left: 20,
+                    bottom: -34,
+                    child: Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.surface, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: NetImage(
+                          s['logoUrl'] as String?,
+                          width: 76,
+                          placeholder: CupertinoIcons.building_2_fill,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: StickyHeader(
-              height: shelves.length > 1 ? 92 : 50,
-              child: Column(children: [
-                if (shelves.length > 1)
-                  SizedBox(
-                    height: 42,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 46, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s['name'] as String, style: AppText.title1),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        s['type'] == 'GROSSISTE' ? 'Grossiste' : 'Boutique',
+                        s['market'],
+                        '$count ${count > 1 ? 'produits' : 'produit'}',
+                      ].whereType<String>().join(' · '),
+                      style: AppText.bodyMuted,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
                       children: [
-                        _shelfChip('Tout', null, count),
-                        for (final r in shelves) ...[const SizedBox(width: 8), _shelfChip(r['name'] as String, r['id'] as String, (r['count'] as num).toInt())],
+                        Icon(
+                          CupertinoIcons.circle_fill,
+                          size: 9,
+                          color: open ? AppColors.success : AppColors.faint,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          open ? 'Ouverte' : 'Fermée',
+                          style: AppText.label.copyWith(
+                            color: open ? AppColors.success : AppColors.muted,
+                          ),
+                        ),
+                        if (hours != null)
+                          Flexible(
+                            child: Text(
+                              '  ·  ${hours['open']} – ${hours['close']}',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.bodyMuted,
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                SizedBox(height: 50, child: CatalogFilterBar(c, showMarket: false)),
-              ]),
+                    if ((s['description'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        s['description'] as String,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.subhead.copyWith(height: 1.4),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    Group(
+                      color: AppColors.surfaceAlt,
+                      dividerIndent: 52,
+                      children: [
+                        Cell(
+                          leading: const Icon(
+                            CupertinoIcons.location_fill,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                          title: (s['location'] as String?) ?? 'Adjamé',
+                          subtitle: s['market'] as String?,
+                        ),
+                        if (hours != null)
+                          Cell(
+                            leading: const Icon(
+                              CupertinoIcons.clock_fill,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            title: '${hours['open']} – ${hours['close']}',
+                            subtitle: (hours['days'] as List)
+                                .map((d) => _days[d as int])
+                                .join(', '),
+                          ),
+                        if (s['phone'] != null)
+                          Cell(
+                            leading: const Icon(
+                              CupertinoIcons.phone_fill,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            title: formatPhone(s['phone'] as String),
+                            subtitle: 'Appeler la boutique',
+                            trailing: const Icon(
+                              CupertinoIcons.arrow_up_right,
+                              size: 16,
+                              color: AppColors.faint,
+                            ),
+                            onTap: () =>
+                                launchUrl(Uri.parse('tel:${s['phone']}')),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 22),
+                    if (count > 8)
+                      CupertinoSearchTextField(
+                        controller: _q,
+                        placeholder: 'Rechercher dans la boutique',
+                        style: AppText.body,
+                        onChanged: (_) {
+                          _debounce?.cancel();
+                          _debounce = Timer(
+                            const Duration(milliseconds: 300),
+                            _apply,
+                          );
+                        },
+                        onSuffixTap: () {
+                          _q.clear();
+                          _apply();
+                        },
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          CatalogResults(c, emptyText: 'Cette boutique ajoute ses produits.'),
-          SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.of(context).padding.bottom)),
-        ]),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: StickyHeader(
+                height: shelves.length > 1 ? 92 : 50,
+                child: Column(
+                  children: [
+                    if (shelves.length > 1)
+                      SizedBox(
+                        height: 42,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          children: [
+                            _shelfChip('Tout', null, count),
+                            for (final r in shelves) ...[
+                              const SizedBox(width: 8),
+                              _shelfChip(
+                                r['name'] as String,
+                                r['id'] as String,
+                                (r['count'] as num).toInt(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    SizedBox(
+                      height: 50,
+                      child: CatalogFilterBar(c, showMarket: false),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            CatalogResults(c, emptyText: 'Cette boutique ajoute ses produits.'),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 32 + MediaQuery.of(context).padding.bottom,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

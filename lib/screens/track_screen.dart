@@ -8,6 +8,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
+import '../order_live.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -69,6 +70,11 @@ mixin _Polling<T extends StatefulWidget> on State<T> {
   Future<void> _load() async {
     try {
       final r = await Api.instance.trackOrder(orderId);
+      OrderLive.instance.live(
+        orderId,
+        etaMin: (r['etaMin'] as num?)?.toInt(),
+        deliveryStatus: r['status'] as String?,
+      );
       if (mounted)
         setState(() {
           data = TrackData(r);

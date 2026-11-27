@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../addresses.dart';
 import '../api.dart';
 import '../cart.dart';
+import '../order_live.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'track_screen.dart';
@@ -535,6 +536,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Future<void> _load() async {
     try {
       final r = await Api.instance.myOrders();
+      OrderLive.instance.syncAll(r);
       if (mounted)
         setState(() {
           _orders = r;
@@ -664,6 +666,8 @@ class _OrderScreenState extends State<OrderScreen> {
   Future<void> _load() async {
     try {
       final o = await Api.instance.order(widget.id);
+      // Suivi hors de l'app (écran verrouillé, Dynamic Island, notification Android)
+      OrderLive.instance.sync(o);
       if (mounted)
         setState(() {
           _o = o;
