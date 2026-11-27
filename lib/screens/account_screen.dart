@@ -1,12 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../addresses.dart';
 import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'auth_screen.dart';
+import 'orders_screen.dart';
 import 'reseller_screen.dart';
 import 'shop_form_screen.dart';
 
@@ -89,59 +90,23 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _addAddress() async {
-    final label = TextEditingController(text: 'Maison');
-    final address = TextEditingController();
-    final landmark = TextEditingController();
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false,
-      builder: (c) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
-        child: SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Row(children: [
-                BarButton('Annuler', onTap: () => Navigator.pop(c, false)),
-                const Expanded(child: Text('Nouvelle adresse', textAlign: TextAlign.center, style: AppText.title)),
-                BarButton('Ajouter', bold: true, onTap: () => Navigator.pop(c, true)),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Group(children: [
-                  _field(label, 'Nom (Maison, Bureau…)'),
-                  _field(address, 'Commune, quartier'),
-                  _field(landmark, 'Repère (facultatif)'),
-                ]),
-                const SectionFooter('Votre position actuelle est enregistrée avec l’adresse, pour guider le livreur.'),
-              ]),
-            ),
-          ]),
-        ),
-      ),
-    );
-    if (ok != true || !mounted) return;
-    try {
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
-      final p = await Geolocator.getCurrentPosition();
-      await api.addAddress({'label': label.text.trim(), 'address': address.text.trim(), 'landmark': landmark.text.trim(), 'lat': p.latitude, 'lng': p.longitude});
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) showError(context, e is ApiException ? e : 'Position indisponible : activez la localisation');
-    }
+    await addAddressSheet(context);
+    if (mounted) setState(() {});
   }
-
-  Widget _field(TextEditingController c, String hint) => TextField(controller: c, style: AppText.body, decoration: InputDecoration(hintText: hint, filled: false));
 
   List<Widget> _sellSections() => [
     const SectionTitle('Vendre sur Adjamé-Smart'),
     Group(dividerIndent: 60, children: [
-      for (final s in _shops)
+      for (final s in _shops) ...[
         Cell(leading: const SettingsIcon(CupertinoIcons.building_2_fill), title: s['name'] as String, value: _shopStatus[s['status']] ?? '', onTap: () => _openShop(Map<String, dynamic>.from(s))),
+        if (s['status'] == 'APPROVED')
+          Cell(
+            leading: const SettingsIcon(CupertinoIcons.tray_full_fill, color: AppColors.accent),
+            title: 'Commandes reçues',
+            subtitle: s['name'] as String,
+            onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => ShopOrdersScreen(shop: s as Map))),
+          ),
+      ],
       Cell(
         leading: const SettingsIcon(CupertinoIcons.plus, color: Color(0xFF2F6F7E)),
         title: _shops.isEmpty ? 'Ouvrir ma boutique' : 'Ouvrir une autre boutique',
@@ -200,6 +165,12 @@ class _AccountScreenState extends State<AccountScreen> {
                       onTap: () => requireAuth(context),
                     ),
             ]),
+            if (logged) ...[
+              const SectionTitle('Achats'),
+              Group(dividerIndent: 56, children: [
+                Cell(leading: const SettingsIcon(CupertinoIcons.bag_fill), title: 'Mes commandes', subtitle: 'Paiement et suivi de livraison', onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const OrdersScreen()))),
+              ]),
+            ],
             ..._sellSections(),
             if (logged) ...[
               const SectionTitle('Adresses de livraison'),

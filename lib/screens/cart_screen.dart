@@ -6,6 +6,7 @@ import '../cart.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'auth_screen.dart';
+import 'orders_screen.dart';
 
 /// Panier : articles groupés par boutique (une livraison LETO par boutique). La connexion est demandée ici, à la commande.
 class CartScreen extends StatelessWidget {
@@ -15,14 +16,7 @@ class CartScreen extends StatelessWidget {
   Future<void> _checkout(BuildContext context) async {
     if (!await requireAuth(context, reason: 'Connectez-vous pour finaliser votre commande')) return;
     if (!context.mounted) return;
-    showCupertinoDialog(
-      context: context,
-      builder: (c) => CupertinoAlertDialog(
-        title: const Text('La commande arrive bientôt'),
-        content: const Text('Votre panier est gardé. Vous pourrez très vite payer par Mobile Money et être livré par LETO.'),
-        actions: [CupertinoDialogAction(isDefaultAction: true, onPressed: () => Navigator.pop(c), child: const Text('OK'))],
-      ),
-    );
+    Navigator.push(context, CupertinoPageRoute(builder: (_) => const CheckoutScreen()));
   }
 
   Future<void> _clear(BuildContext context) async {
@@ -108,7 +102,7 @@ class CartScreen extends StatelessWidget {
             Positioned(
               left: 14,
               right: 14,
-              bottom: tabBar + 4,
+              bottom: tabBar - 6,
               child: Glass(
                 radius: BorderRadius.circular(30),
                 opacity: 0.8,

@@ -166,6 +166,20 @@ class Api extends ChangeNotifier {
   Future<Map<String, dynamic>> product(String id) async => await _request('GET', '/products/$id') as Map<String, dynamic>;
   Future<void> reportProduct(String id, String reason) async => _request('POST', '/products/$id/report', {'reason': reason});
 
+  // ---------- Commandes ----------
+  /// Lignes du panier envoyées au serveur (prix et stocks revérifiés côté serveur)
+  Future<Map<String, dynamic>> orderQuote(Map<String, dynamic> body) async => await _request('POST', '/orders/quote', body) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> checkout(Map<String, dynamic> body) async => await _request('POST', '/orders', body) as Map<String, dynamic>;
+  Future<List<dynamic>> myOrders() async => await _request('GET', '/orders/mine') as List<dynamic>;
+  Future<Map<String, dynamic>> order(String id) async => await _request('GET', '/orders/$id') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> declarePayment(String id, String reference, {String? payerPhone}) async =>
+      await _request('POST', '/orders/mine/$id/payment', {'reference': reference, 'payerPhone': ?payerPhone}) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> cancelOrder(String id) async => await _request('POST', '/orders/mine/$id/cancel') as Map<String, dynamic>;
+  // Boutique
+  Future<List<dynamic>> shopOrders(String shopId) async => await _request('GET', '/orders/shop?shopId=$shopId') as List<dynamic>;
+  Future<Map<String, dynamic>> shopOrderAction(String id, String action, [String? note]) async =>
+      await _request('POST', '/orders/shop/$id/$action', note == null ? null : {'note': note}) as Map<String, dynamic>;
+
   // ---------- Mes produits (vendeur) ----------
   Future<List<dynamic>> myProducts(String shopId) async =>
       await _request('GET', '/products/mine?shopId=$shopId') as List<dynamic>;

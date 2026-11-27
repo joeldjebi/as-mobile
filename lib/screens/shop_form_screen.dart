@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -50,6 +51,8 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
       ? LatLng((_s!['lat'] as num).toDouble(), (_s!['lng'] as num).toDouble())
       : null;
   late int _prepay = (_s?['prepayPercent'] as num?)?.toInt() ?? 100;
+  late String _payout = (_s?['payoutMode'] as String?) ?? 'PLATFORM';
+  late final _alias = TextEditingController(text: _s?['pispiAlias'] as String? ?? '');
   late String _open = (_s?['hours'] as Map?)?['open'] ?? '08:00';
   late String _close = (_s?['hours'] as Map?)?['close'] ?? '18:00';
   late final Set<int> _openDays = {
@@ -92,6 +95,8 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
       if (phone.isNotEmpty) 'phone': phone,
       'categoryIds': _cats.toList(),
       'prepayPercent': _prepay,
+      'pispiAlias': _alias.text.trim(),
+      'payoutMode': _payout,
       'hours': {
         'open': _open,
         'close': _close,
@@ -482,6 +487,28 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
             const SectionTitle('Paiement avant livraison'),
             PrepayPicker(value: _prepay, onChanged: (v) => setState(() => _prepay = v ?? 100)),
             const SectionFooter('Valeur par défaut de vos produits ; vous pouvez la changer produit par produit.'),
+            const SectionTitle('Encaissement des ventes'),
+            Group(children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: CupertinoSlidingSegmentedControl<String>(
+                    groupValue: _payout,
+                    children: const {'PLATFORM': Text('Via Adjamé-Smart'), 'DIRECT': Text('Directement')},
+                    onValueChanged: (v) => setState(() => _payout = v ?? 'PLATFORM'),
+                  ),
+                ),
+              ),
+              if (_payout == 'DIRECT')
+                Padding(
+                  padding: const EdgeInsets.only(left: 14),
+                  child: TextField(controller: _alias, decoration: const InputDecoration(hintText: 'Votre alias PI-SPI (numéro Mobile Money)', filled: false)),
+                ),
+            ]),
+            SectionFooter(_payout == 'DIRECT'
+                ? 'Le client vous paie directement. Vous confirmez la réception dans « Commandes reçues » : la livraison LETO part aussitôt.'
+                : 'Le client paie Adjamé-Smart, qui confirme la réception puis vous reverse le montant.'),
             const SectionTitle('Photos de la boutique'),
             Row(
               children: [

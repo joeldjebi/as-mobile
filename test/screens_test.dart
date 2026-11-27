@@ -2,6 +2,7 @@ import 'package:adjame_smart/cart.dart';
 import 'package:adjame_smart/screens/account_screen.dart';
 import 'package:adjame_smart/screens/auth_screen.dart';
 import 'package:adjame_smart/screens/cart_screen.dart';
+import 'package:adjame_smart/screens/orders_screen.dart';
 import 'package:adjame_smart/screens/shop_form_screen.dart';
 import 'package:adjame_smart/theme.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,19 @@ void main() {
     await t.tap(find.text('Commander'));
     await t.pumpAndSettle();
     expect(find.text('Connectez-vous pour finaliser votre commande'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('Commande enregistrée : une commande par boutique à payer', (t) async {
+    t.view.physicalSize = const Size(390 * 3, 844 * 3);
+    t.view.devicePixelRatio = 3;
+    await t.pumpWidget(app(const CheckoutDoneScreen(orders: [
+      {'id': 'o1', 'number': 'AS-1004', 'shopName': 'Awa Pagnes', 'dueNow': 10200},
+      {'id': 'o2', 'number': 'AS-1005', 'shopName': 'Phone 24', 'dueNow': 8000},
+    ])));
+    expect(find.text('Commande enregistrée'), findsOneWidget);
+    expect(find.text('AS-1004 · Awa Pagnes'), findsOneWidget);
+    expect(find.text('Voir mes commandes'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
