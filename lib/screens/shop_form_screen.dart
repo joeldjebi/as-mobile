@@ -8,6 +8,7 @@ import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'photo_field.dart';
+import 'prepay_picker.dart';
 import 'products_screen.dart';
 
 /// Centre d'Adjamé (Forum des marchés)
@@ -48,6 +49,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
   late LatLng? _pos = _s?['lat'] != null
       ? LatLng((_s!['lat'] as num).toDouble(), (_s!['lng'] as num).toDouble())
       : null;
+  late int _prepay = (_s?['prepayPercent'] as num?)?.toInt() ?? 100;
   late String _open = (_s?['hours'] as Map?)?['open'] ?? '08:00';
   late String _close = (_s?['hours'] as Map?)?['close'] ?? '18:00';
   late final Set<int> _openDays = {
@@ -89,6 +91,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
       'description': _description.text.trim(),
       if (phone.isNotEmpty) 'phone': phone,
       'categoryIds': _cats.toList(),
+      'prepayPercent': _prepay,
       'hours': {
         'open': _open,
         'close': _close,
@@ -476,6 +479,9 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
                 ),
               ],
             ),
+            const SectionTitle('Paiement avant livraison'),
+            PrepayPicker(value: _prepay, onChanged: (v) => setState(() => _prepay = v ?? 100)),
+            const SectionFooter('Valeur par défaut de vos produits ; vous pouvez la changer produit par produit.'),
             const SectionTitle('Photos de la boutique'),
             Row(
               children: [

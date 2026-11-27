@@ -201,7 +201,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
               itemBuilder: (_, i) => ShopRow(_items[i] as Map),
             ),
           if (_loaded && _loading) const SliverToBoxAdapter(child: Loader()),
-          SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + (widget.embedded ? 90 : 24))),
+          SliverToBoxAdapter(child: SizedBox(height: (widget.embedded ? tabBarHeight(context) + 20 : MediaQuery.of(context).padding.bottom + 24))),
         ]),
       ),
     );

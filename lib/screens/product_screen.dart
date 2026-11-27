@@ -86,6 +86,7 @@ class _ProductScreenState extends State<ProductScreen> {
       shopId: shop['id'] as String,
       shopName: shop['name'] as String,
       qty: _qty,
+      prepayPercent: (p['prepayPercent'] as num?)?.toInt() ?? 100,
     ));
     HapticFeedback.mediumImpact();
     _addedSheet(p['name'] as String, photos.isEmpty ? null : photos.first);
@@ -166,6 +167,7 @@ class _ProductScreenState extends State<ProductScreen> {
     final shop = p['shop'] as Map?;
     final loaded = _p != null;
     final reseller = Api.instance.user?['resellerStatus'] == 'APPROVED';
+    final prepay = (p['prepayPercent'] as num?)?.toInt() ?? 100;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -215,10 +217,10 @@ class _ProductScreenState extends State<ProductScreen> {
                   child: Text(shop['name'] as String, style: AppText.subhead.copyWith(color: AppColors.primary)),
                 ),
               const SizedBox(height: 4),
-              Text(p['name'] as String, style: AppText.title1.copyWith(fontSize: 26)),
+              Text(p['name'] as String, style: AppText.title1.copyWith(fontSize: 22)),
               const SizedBox(height: 8),
               Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                Text(formatMoney(price), style: AppText.price.copyWith(fontSize: 22)),
+                Text(formatMoney(price), style: AppText.price.copyWith(fontSize: 19)),
                 const SizedBox(width: 10),
                 Text(
                   out ? 'Épuisé' : stock == null ? 'Disponible' : stock <= 5 ? 'Plus que $stock' : 'En stock',
@@ -273,24 +275,39 @@ class _ProductScreenState extends State<ProductScreen> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShopPage(slug: shop['slug'] as String))),
                   ),
                 const Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livré par LETO', subtitle: 'Frais de livraison payés en espèces au livreur'),
-                const Cell(leading: SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent), title: 'Paiement Mobile Money', subtitle: 'Le colis vous est remis une fois le paiement confirmé'),
+                Cell(
+                  leading: const SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent),
+                  title: prepay >= 100 ? 'Payé en entier à la commande' : 'Acompte de $prepay % à la commande',
+                  subtitle: prepay >= 100
+                      ? 'Mobile Money ; colis remis une fois le paiement confirmé'
+                      : '${formatMoney((price * _qty * prepay / 100).round())} en Mobile Money, ${formatMoney(price * _qty - (price * _qty * prepay / 100).round())} à la livraison',
+                ),
               ]),
-              const SizedBox(height: 28),
+              SizedBox(height: tabBarHeight(context) + 20),
             ]),
           ),
         ),
       ]),
-      bottomNavigationBar: BottomActionBar(
-        child: Row(children: [
-          QtyStepper(qty: _qty, onChanged: (q) => setState(() => _qty = q)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton(
-              onPressed: !loaded || out || shop == null ? null : () => _add(p, variants),
-              child: FittedBox(child: Text(out ? 'Épuisé' : 'Ajouter · ${formatMoney(price * _qty)}')),
-            ),
+      extendBody: true,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.fromLTRB(14, 0, 14, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom - 6 : 12),
+        child: Glass(
+          radius: BorderRadius.circular(30),
+          opacity: 0.8,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Row(children: [
+              QtyStepper(qty: _qty, onChanged: (q) => setState(() => _qty = q)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: !loaded || out || shop == null ? null : () => _add(p, variants),
+                  child: FittedBox(child: Text(out ? 'Épuisé' : 'Ajouter · ${formatMoney(price * _qty)}')),
+                ),
+              ),
+            ]),
           ),
-        ]),
+        ),
       ),
     );
   }

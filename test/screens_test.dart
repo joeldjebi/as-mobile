@@ -42,7 +42,7 @@ void main() {
     t.view.physicalSize = const Size(390 * 3, 844 * 3);
     t.view.devicePixelRatio = 3;
     Cart.instance.items.clear();
-    Cart.instance.add(CartItem(productId: 'p1', name: 'Pagne wax 6 yards', price: 12500, shopId: 's1', shopName: 'Awa Pagnes', qty: 2));
+    Cart.instance.add(CartItem(productId: 'p1', name: 'Pagne wax 6 yards', price: 12500, shopId: 's1', shopName: 'Awa Pagnes', qty: 2, prepayPercent: 30));
     Cart.instance.add(CartItem(productId: 'p2', variantId: 'v1', variantLabel: 'Taille M', name: 'Robe', price: 8000, shopId: 's2', shopName: 'Mode Adjamé'));
     await t.pumpWidget(app(CartScreen(onBrowse: () {})));
     await t.pump();
@@ -50,7 +50,12 @@ void main() {
     expect(find.text('MODE ADJAMÉ · 1 ARTICLE'), findsOneWidget);
     expect(find.text('Articles (3)'), findsOneWidget);
     expect(find.text('Livraisons (2)'), findsOneWidget);
-    await t.tap(find.text('Passer la commande'));
+    // Acompte 30 % sur 25 000 F (7 500 F) + robe payée en entier (8 000 F) : 15 500 F maintenant, 17 500 F à la livraison
+    expect(Cart.instance.dueNow, 15500);
+    expect(Cart.instance.dueOnDelivery, 17500);
+    expect(find.text('Acompte 30 % à la commande'), findsOneWidget);
+    expect(find.text('Reste à la livraison'), findsOneWidget);
+    await t.tap(find.text('Commander'));
     await t.pumpAndSettle();
     expect(find.text('Connectez-vous pour finaliser votre commande'), findsOneWidget);
     expect(t.takeException(), isNull);

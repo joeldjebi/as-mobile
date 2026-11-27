@@ -1,5 +1,6 @@
-import 'package:flutter/cupertino.dart';
 import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'prepay_picker.dart';
 
 /// Ajout / modification d'un produit : photos (6 max), nom, catégorie, prix, prix de gros (grossistes), stock, variantes
 class ProductFormScreen extends StatefulWidget {
@@ -43,6 +45,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   ];
   late String? _categoryId = p?['categoryId'];
   late bool _trackStock = p?['stock'] != null;
+  late int? _prepay = (p?['prepayPercent'] as num?)?.toInt();
   late bool _active = p == null || p!['status'] == 'ACTIVE';
   late final List<_Variant> _variants = [
     for (final v in ((p?['variants'] as List?) ?? []).cast<Map>())
@@ -190,6 +193,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       'wholesalePrice': wholesale,
       'wholesaleMinQty': wholesale == null ? null : _int(_minQty),
       'stock': _trackStock && _variants.isEmpty ? (_int(_stock) ?? 0) : null,
+      'prepayPercent': _prepay,
       'variants': [
         for (final v in _variants)
           if (v.label.text.trim().isNotEmpty)
@@ -374,6 +378,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             ),
           ),
         ],
+        const SectionTitle('Paiement avant livraison'),
+        PrepayPicker(
+          value: _prepay,
+          allowInherit: true,
+          shopDefault: (widget.shop['prepayPercent'] as num?)?.toInt(),
+          onChanged: (v) => setState(() => _prepay = v),
+        ),
         const SectionTitle('Stock'),
         Card(
           child: SwitchListTile(

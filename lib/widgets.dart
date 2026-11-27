@@ -193,7 +193,7 @@ class ProductGridSkeleton extends StatelessWidget {
   const ProductGridSkeleton({super.key, this.count = 4});
   @override
   Widget build(BuildContext context) => SliverGrid.builder(
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 20, crossAxisSpacing: 12, childAspectRatio: 0.56),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 18, crossAxisSpacing: 10, childAspectRatio: 0.66),
     itemCount: count,
     itemBuilder: (_, _) => const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       AspectRatio(aspectRatio: 4 / 5, child: Skeleton(height: double.infinity, radius: 14)),
@@ -266,12 +266,12 @@ class FilterPill extends StatelessWidget {
     onTap: onTap,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 13),
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(color: active ? AppColors.ink : AppColors.surface, borderRadius: BorderRadius.circular(17), border: Border.all(color: active ? AppColors.ink : AppColors.line)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 15, color: active ? Colors.white : AppColors.ink), const SizedBox(width: 6)],
-        Text(label, style: AppText.subhead.copyWith(fontSize: 14, fontWeight: FontWeight.w500, color: active ? Colors.white : AppColors.ink)),
+        Text(label, style: AppText.subhead.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: active ? Colors.white : AppColors.ink)),
         if (dropdown) ...[const SizedBox(width: 4), Icon(CupertinoIcons.chevron_down, size: 12, color: active ? Colors.white : AppColors.muted)],
       ]),
     ),
@@ -310,7 +310,7 @@ class SectionHeader extends StatelessWidget {
   final String? action;
   final VoidCallback? onAction;
   final EdgeInsets padding;
-  const SectionHeader(this.title, {super.key, this.action, this.onAction, this.padding = const EdgeInsets.fromLTRB(20, 30, 12, 10)});
+  const SectionHeader(this.title, {super.key, this.action, this.onAction, this.padding = const EdgeInsets.fromLTRB(18, 26, 10, 8)});
   @override
   Widget build(BuildContext context) => Padding(
     padding: padding,
@@ -321,7 +321,7 @@ class SectionHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           minimumSize: const Size(44, 32),
           onPressed: onAction,
-          child: Text(action!, style: AppText.body.copyWith(color: AppColors.primary)),
+          child: Text(action!, style: AppText.subhead.copyWith(color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
     ]),
   );
@@ -332,7 +332,7 @@ class SectionTitle extends StatelessWidget {
   final String text;
   const SectionTitle(this.text, {super.key});
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(16, 26, 16, 7), child: Text(text.toUpperCase(), style: AppText.caption));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(16, 22, 16, 6), child: Text(text.toUpperCase(), style: AppText.caption.copyWith(fontSize: 11.5, letterSpacing: 0.2)));
 }
 
 /// Note sous un groupe
@@ -367,7 +367,7 @@ class SettingsIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double size;
-  const SettingsIcon(this.icon, {super.key, this.color = AppColors.primary, this.size = 30});
+  const SettingsIcon(this.icon, {super.key, this.color = AppColors.primary, this.size = 27});
   @override
   Widget build(BuildContext context) => Container(
     width: size,
@@ -407,10 +407,10 @@ class _CellState extends State<Cell> {
       child: AnimatedContainer(
         duration: Duration(milliseconds: _down ? 0 : 200),
         color: _down ? AppColors.line : Colors.transparent,
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(children: [
-          if (w.leading != null) ...[w.leading!, const SizedBox(width: 14)],
+          if (w.leading != null) ...[w.leading!, const SizedBox(width: 12)],
           Expanded(
             child: w.subtitle == null || w.subtitle!.isEmpty
                 ? title
@@ -418,7 +418,7 @@ class _CellState extends State<Cell> {
           ),
           if (w.value != null) ...[const SizedBox(width: 8), Text(w.value!, style: AppText.body.copyWith(color: AppColors.muted))],
           if (w.trailing != null) ...[const SizedBox(width: 8), w.trailing!]
-          else if (w.onTap != null && !w.center) ...[const SizedBox(width: 8), const Icon(CupertinoIcons.chevron_forward, size: 17, color: AppColors.faint)],
+          else if (w.onTap != null && !w.center) ...[const SizedBox(width: 8), const Icon(CupertinoIcons.chevron_forward, size: 14, color: AppColors.faint)],
         ]),
       ),
     );
@@ -494,14 +494,14 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 52, color: AppColors.faint),
+      Icon(icon, size: 42, color: AppColors.faint),
       const SizedBox(height: 16),
       Text(title, textAlign: TextAlign.center, style: AppText.headline),
       if (text != null) ...[const SizedBox(height: 6), Text(text!, textAlign: TextAlign.center, style: AppText.bodyMuted)],
       if (action != null) ...[
         const SizedBox(height: 18),
         FilledButton(
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 26), shape: const StadiumBorder()),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 22), shape: const StadiumBorder()),
           onPressed: onAction,
           child: Text(action!),
         ),
@@ -524,10 +524,10 @@ class RoundIconButton extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
-          width: 38,
-          height: 38,
-          color: Colors.white.withValues(alpha: 0.78),
-          child: Icon(icon, size: 19, color: color ?? AppColors.ink),
+          width: 34,
+          height: 34,
+          color: Colors.white.withValues(alpha: 0.72),
+          child: Icon(icon, size: 16, color: color ?? AppColors.ink),
         ),
       ),
     ),
@@ -543,7 +543,7 @@ class QtyStepper extends StatelessWidget {
   const QtyStepper({super.key, required this.qty, required this.onChanged, this.min = 1, this.compact = false});
   @override
   Widget build(BuildContext context) {
-    final h = compact ? 32.0 : 50.0;
+    final h = compact ? 30.0 : 46.0;
     Widget btn(IconData icon, VoidCallback? onTap) => CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: Size(compact ? 34 : 44, h),
@@ -557,7 +557,7 @@ class QtyStepper extends StatelessWidget {
     );
     return Container(
       height: h,
-      decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(compact ? 9 : 14)),
+      decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(h / 2)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         btn(min == 0 && qty == 1 ? CupertinoIcons.trash : CupertinoIcons.minus, qty > min ? () => onChanged(qty - 1) : null),
         SizedBox(width: compact ? 22 : 28, child: Text('$qty', textAlign: TextAlign.center, style: (compact ? AppText.label : AppText.title).copyWith(fontFeatures: const [FontFeature.tabularFigures()]))),
@@ -565,4 +565,32 @@ class QtyStepper extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// Hauteur occupée par la barre d'onglets flottante (pour laisser le contenu défiler au-dessus)
+double tabBarHeight(BuildContext context) {
+  final b = MediaQuery.of(context).padding.bottom;
+  return (b > 0 ? b : 12) + 62;
+}
+
+/// Surface « verre » d'iOS : flou, voile clair, liseré lumineux, ombre douce
+class Glass extends StatelessWidget {
+  final Widget child;
+  final BorderRadius radius;
+  final double opacity;
+  const Glass({super.key, required this.child, required this.radius, this.opacity = 0.72});
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(borderRadius: radius, boxShadow: const [BoxShadow(color: Color(0x1F000000), blurRadius: 24, offset: Offset(0, 8))]),
+    child: ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: opacity), borderRadius: radius, border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 0.8)),
+          child: child,
+        ),
+      ),
+    ),
+  );
 }

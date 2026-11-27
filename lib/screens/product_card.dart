@@ -1,46 +1,107 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:flutter/services.dart';
+
+import '../cart.dart';
 import '../catalog.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'product_screen.dart';
 
-/// Carte d'un produit : photo, nom, prix, boutique
+/// Carte d'un produit : photo pleine, prix sur pastille de verre, ajout rapide « + », nom et boutique
 class ProductCard extends StatelessWidget {
   final Map p;
   final double? width;
   const ProductCard(this.p, {super.key, this.width});
 
+  void _open(BuildContext context) => Navigator.push(context, CupertinoPageRoute(builder: (_) => ProductScreen(id: p['id'] as String, preview: p)));
+
+  /// Ajout direct au panier (produit sans option) ; sinon ouverture de la fiche pour choisir
+  void _quickAdd(BuildContext context) {
+    final variants = (p['variants'] as List?) ?? [];
+    final shop = p['shop'] as Map?;
+    if (variants.isNotEmpty || shop == null) return _open(context);
+    final photos = (p['photos'] as List?) ?? [];
+    Cart.instance.add(CartItem(
+      productId: p['id'] as String,
+      name: p['name'] as String,
+      photo: photos.isEmpty ? null : photos.first as String,
+      price: (p['price'] as num).toInt(),
+      shopId: shop['id'] as String,
+      shopName: shop['name'] as String,
+      prepayPercent: (p['prepayPercent'] as num?)?.toInt() ?? 100,
+    ));
+    HapticFeedback.mediumImpact();
+    showInfo(context, 'Ajouté au panier');
+  }
+
   @override
   Widget build(BuildContext context) {
     final photos = (p['photos'] as List?) ?? [];
+    final out = p['inStock'] == false;
+    final prepay = (p['prepayPercent'] as num?)?.toInt() ?? 100;
     final card = Pressable(
-      onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => ProductScreen(id: p['id'] as String, preview: p))),
+      onTap: () => _open(context),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           child: AspectRatio(
             aspectRatio: 4 / 5,
             child: Stack(fit: StackFit.expand, children: [
               Hero(tag: 'product-${p['id']}', child: NetImage(photos.isEmpty ? null : photos.first as String, width: 180)),
-              if (p['inStock'] == false) Positioned(left: 8, top: 8, child: Pill('Épuisé', background: Colors.white.withValues(alpha: 0.9), foreground: AppColors.ink)),
-              if (p['hasWholesale'] == true) const Positioned(right: 8, top: 8, child: Pill('Gros', background: AppColors.primary)),
+              Positioned(
+                left: 7,
+                top: 7,
+                right: 7,
+                child: Wrap(spacing: 4, runSpacing: 4, children: [
+                  if (out) Pill('Épuisé', background: Colors.white.withValues(alpha: 0.92), foreground: AppColors.ink),
+                  if (p['hasWholesale'] == true) const Pill('Gros', background: AppColors.primary),
+                  if (prepay < 100) Pill('Acompte $prepay %', background: AppColors.accent),
+                ]),
+              ),
+              Positioned(
+                left: 7,
+                bottom: 7,
+                child: Glass(
+                  radius: BorderRadius.circular(14),
+                  opacity: 0.78,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    child: Text(formatMoney(p['price'] as num), style: AppText.price.copyWith(fontSize: 13.5)),
+                  ),
+                ),
+              ),
+              if (!out)
+                Positioned(
+                  right: 7,
+                  bottom: 7,
+                  child: GestureDetector(
+                    onTap: () => _quickAdd(context),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(color: AppColors.ink, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 3))]),
+                      child: const Icon(CupertinoIcons.plus, size: 17, color: Colors.white),
+                    ),
+                  ),
+                ),
             ]),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(p['name'] as String, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.subhead.copyWith(height: 1.25)),
-        const SizedBox(height: 3),
-        Text(formatMoney(p['price'] as num), style: AppText.price.copyWith(fontSize: 15)),
-        if (p['shop'] != null) Text(p['shop']['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption),
+        const SizedBox(height: 7),
+        Text(p['name'] as String, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.subhead.copyWith(fontSize: 13.5, height: 1.25)),
+        if (p['shop'] != null) ...[
+          const SizedBox(height: 2),
+          Text(p['shop']['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(fontSize: 11.5)),
+        ],
       ]),
     );
     return width == null ? card : SizedBox(width: width, child: card);
   }
 }
 
-const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 20, crossAxisSpacing: 12, childAspectRatio: 0.56);
+const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 18, crossAxisSpacing: 10, childAspectRatio: 0.66);
 
 /// Grille de produits dans un CustomScrollView
 class ProductSliverGrid extends StatelessWidget {
@@ -56,13 +117,13 @@ class ProductRail extends StatelessWidget {
   const ProductRail(this.items, {super.key});
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 292,
+    height: 254,
     child: ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
       itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (_, i) => ProductCard(items[i] as Map, width: 160),
+      separatorBuilder: (_, _) => const SizedBox(width: 10),
+      itemBuilder: (_, i) => ProductCard(items[i] as Map, width: 146),
     ),
   );
 }

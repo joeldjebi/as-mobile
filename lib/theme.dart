@@ -30,18 +30,18 @@ class AppColors {
 class AppText {
   static const _text = 'CupertinoSystemText';
   static const _display = 'CupertinoSystemDisplay';
-  static const display = TextStyle(fontFamily: _display, fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: 0.37, height: 1.2, color: AppColors.ink);
-  static const title1 = TextStyle(fontFamily: _display, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: 0.36, height: 1.2, color: AppColors.ink);
-  static const headline = TextStyle(fontFamily: _display, fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: 0.35, height: 1.25, color: AppColors.ink);
+  static const display = TextStyle(fontFamily: _display, fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: 0.36, height: 1.2, color: AppColors.ink);
+  static const title1 = TextStyle(fontFamily: _display, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 0.3, height: 1.2, color: AppColors.ink);
+  static const headline = TextStyle(fontFamily: _display, fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: 0.3, height: 1.25, color: AppColors.ink);
   static const section = headline;
-  static const title = TextStyle(fontFamily: _text, fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.43, height: 1.3, color: AppColors.ink);
-  static const body = TextStyle(fontFamily: _text, fontSize: 17, letterSpacing: -0.43, height: 1.35, color: AppColors.ink);
-  static const bodyMuted = TextStyle(fontFamily: _text, fontSize: 15, letterSpacing: -0.24, height: 1.35, color: AppColors.muted);
-  static const label = TextStyle(fontFamily: _text, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.24, color: AppColors.ink);
-  static const subhead = TextStyle(fontFamily: _text, fontSize: 15, letterSpacing: -0.24, height: 1.3, color: AppColors.ink);
-  static const caption = TextStyle(fontFamily: _text, fontSize: 13, letterSpacing: -0.08, height: 1.3, color: AppColors.muted);
-  static const overline = TextStyle(fontFamily: _text, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.08, color: AppColors.muted);
-  static const price = TextStyle(fontFamily: _text, fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.43, color: AppColors.ink, fontFeatures: [FontFeature.tabularFigures()]);
+  static const title = TextStyle(fontFamily: _text, fontSize: 15.5, fontWeight: FontWeight.w600, letterSpacing: -0.43, height: 1.3, color: AppColors.ink);
+  static const body = TextStyle(fontFamily: _text, fontSize: 15.5, letterSpacing: -0.3, height: 1.35, color: AppColors.ink);
+  static const bodyMuted = TextStyle(fontFamily: _text, fontSize: 14, letterSpacing: -0.15, height: 1.35, color: AppColors.muted);
+  static const label = TextStyle(fontFamily: _text, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.24, color: AppColors.ink);
+  static const subhead = TextStyle(fontFamily: _text, fontSize: 14, letterSpacing: -0.15, height: 1.3, color: AppColors.ink);
+  static const caption = TextStyle(fontFamily: _text, fontSize: 12, letterSpacing: -0.08, height: 1.3, color: AppColors.muted);
+  static const overline = TextStyle(fontFamily: _text, fontSize: 11.5, fontWeight: FontWeight.w600, letterSpacing: -0.08, color: AppColors.muted);
+  static const price = TextStyle(fontFamily: _text, fontSize: 15.5, fontWeight: FontWeight.w600, letterSpacing: -0.3, color: AppColors.ink, fontFeatures: [FontFeature.tabularFigures()]);
 }
 
 ThemeData buildTheme() {
@@ -51,7 +51,12 @@ ThemeData buildTheme() {
     primaryColor: AppColors.primary,
     scaffoldBackgroundColor: AppColors.background,
     barBackgroundColor: Color(0xCCF9F9F9),
-    textTheme: CupertinoTextThemeData(primaryColor: AppColors.primary),
+    textTheme: CupertinoTextThemeData(
+      primaryColor: AppColors.primary,
+      navLargeTitleTextStyle: TextStyle(fontFamily: 'CupertinoSystemDisplay', fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: 0.36, color: AppColors.ink),
+      navTitleTextStyle: TextStyle(fontFamily: 'CupertinoSystemText', fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: -0.3, color: AppColors.ink),
+      textStyle: TextStyle(fontFamily: 'CupertinoSystemText', fontSize: 15.5, letterSpacing: -0.3, color: AppColors.ink),
+    ),
   );
   return ThemeData(
     useMaterial3: true,
@@ -85,9 +90,9 @@ ThemeData buildTheme() {
         foregroundColor: Colors.white,
         disabledBackgroundColor: AppColors.fill,
         disabledForegroundColor: AppColors.faint,
-        minimumSize: const Size.fromHeight(50),
+        minimumSize: const Size.fromHeight(46),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: const StadiumBorder(),
         textStyle: AppText.title,
       ),
     ),
@@ -96,9 +101,9 @@ ThemeData buildTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
         backgroundColor: AppColors.primarySoft,
-        minimumSize: const Size.fromHeight(50),
+        minimumSize: const Size.fromHeight(46),
         side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: const StadiumBorder(),
         textStyle: AppText.title,
       ),
     ),
@@ -112,7 +117,7 @@ ThemeData buildTheme() {
       enabledBorder: OutlineInputBorder(borderRadius: field, borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(borderRadius: field, borderSide: BorderSide.none),
       disabledBorder: OutlineInputBorder(borderRadius: field, borderSide: BorderSide.none),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     ),
     cardTheme: CardThemeData(color: AppColors.surface, elevation: 0, margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     chipTheme: ChipThemeData(

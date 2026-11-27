@@ -259,7 +259,7 @@ class SearchTabState extends State<SearchTab> {
               ),
             ),
             ...(_submitted != null ? _results() : typing ? _suggestions() : _idle()),
-            SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 90)),
+            SliverToBoxAdapter(child: SizedBox(height: tabBarHeight(context) + 20)),
           ]),
         ),
       ),

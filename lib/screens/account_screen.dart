@@ -176,7 +176,7 @@ class _AccountScreenState extends State<AccountScreen> {
         const LargeTitleBar('Compte'),
         if (logged) CupertinoSliverRefreshControl(onRefresh: _load),
         SliverPadding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 90),
+          padding: EdgeInsets.fromLTRB(16, 8, 16, tabBarHeight(context) + 20),
           sliver: SliverList.list(children: [
             // Profil (style identifiant Apple)
             Group(children: [

@@ -13,17 +13,25 @@ class CartItem {
   final int price;
   final String shopId;
   final String shopName;
+  /// Part payée à la commande (définie par la boutique), le reste à la livraison
+  final int prepayPercent;
   int qty;
-  CartItem({required this.productId, this.variantId, required this.name, this.variantLabel, this.photo, required this.price, required this.shopId, required this.shopName, this.qty = 1});
+  CartItem({required this.productId, this.variantId, required this.name, this.variantLabel, this.photo, required this.price, required this.shopId, required this.shopName, this.qty = 1, this.prepayPercent = 100});
+
+  int get subtotal => price * qty;
+  /// Montant à payer à la commande (arrondi au franc)
+  int get dueNow => prepayPercent >= 100 ? subtotal : (subtotal * prepayPercent / 100).round();
+  int get dueOnDelivery => subtotal - dueNow;
 
   String get key => '$productId:${variantId ?? ''}';
   Map<String, dynamic> toJson() => {
     'productId': productId, 'variantId': variantId, 'name': name, 'variantLabel': variantLabel, 'photo': photo,
-    'price': price, 'shopId': shopId, 'shopName': shopName, 'qty': qty,
+    'price': price, 'shopId': shopId, 'shopName': shopName, 'qty': qty, 'prepayPercent': prepayPercent,
   };
   factory CartItem.fromJson(Map<String, dynamic> j) => CartItem(
     productId: j['productId'], variantId: j['variantId'], name: j['name'], variantLabel: j['variantLabel'], photo: j['photo'],
     price: (j['price'] as num).toInt(), shopId: j['shopId'], shopName: j['shopName'], qty: (j['qty'] as num).toInt(),
+    prepayPercent: (j['prepayPercent'] as num?)?.toInt() ?? 100,
   );
 }
 
@@ -35,6 +43,8 @@ class Cart extends ChangeNotifier {
 
   int get count => items.fold(0, (t, i) => t + i.qty);
   int get total => items.fold(0, (t, i) => t + i.qty * i.price);
+  int get dueNow => items.fold(0, (t, i) => t + i.dueNow);
+  int get dueOnDelivery => items.fold(0, (t, i) => t + i.dueOnDelivery);
 
   /// Articles groupés par boutique (une livraison LETO par boutique)
   Map<String, List<CartItem>> get byShop {
