@@ -200,9 +200,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Widget> _deliveryPicker(Map<String, dynamic>? q) {
     final opts = ((q?['deliveryOptions'] as List?) ?? []).cast<Map>();
     if (opts.isEmpty) return const [];
-    final vs = vehicles.keys
-        .where((v) => opts.any((o) => o['vehicleType'] == v))
-        .toList();
+    final vs = opts.map((o) => '${o['vehicleType']}').toSet().toList();
+    final info = q?['vehicles'] as List?;
     num? price(String sp) =>
         opts
                 .where((o) => o['vehicleType'] == _vehicle && o['speed'] == sp)
@@ -226,7 +225,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             for (final v in vs)
               v: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(vehicles[v]!.$1),
+                child: Text(vehicleName(v, info)),
               ),
           },
           onValueChanged: (v) => v == null ? null : choose(v: v),
@@ -257,7 +256,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
       SectionFooter(
-        '${vehicles[_vehicle]!.$2}. Payée en espèces au livreur, qui peut vous proposer un autre prix.',
+        '${vehicleHint(_vehicle, info).isEmpty ? '' : '${vehicleHint(_vehicle, info)}. '}Payée en espèces au livreur, qui peut vous proposer un autre prix.',
       ),
     ];
   }
@@ -969,7 +968,7 @@ class _OrderScreenState extends State<OrderScreen> {
       if (o['status'] == 'IN_DELIVERY' && d['status'] == 'PENDING')
         OffersCard(orderId: o['id'] as String, onAccepted: _load),
       SectionTitle(
-        'Livraison VITE · ${deliveryLabel(o['vehicleType'], o['speed'])}',
+        'Livraison VITE · ${deliveryLabel(o['vehicleType'], o['speed'], o['vehicleName'])}',
       ),
       // Suivi en direct dans l'app : carte, livreur, temps restant
       if (live) ...[
