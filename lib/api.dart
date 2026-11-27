@@ -6,15 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Adresse de l'API : --dart-define=API_URL=… ; sinon production en release, machine locale en debug
+/// Adresse de l'API : production par défaut (même lancée depuis Xcode ou Android Studio).
+/// Pour tester sur un serveur local : flutter run --dart-define=API_URL=http://127.0.0.1:3100
 const _defined = String.fromEnvironment('API_URL');
-final String apiUrl = _defined.isNotEmpty
-    ? _defined
-    : kReleaseMode
-    ? 'https://api.as.vite.ci'
-    : Platform.isAndroid
-    ? 'http://10.0.2.2:3100'
-    : 'http://127.0.0.1:3100';
+final String apiUrl = _defined.isNotEmpty ? _defined : 'https://api.as.vite.ci';
 
 String photoUrl(String path) => path.startsWith('http') ? path : '$apiUrl$path';
 
