@@ -11,7 +11,7 @@ const _defined = String.fromEnvironment('API_URL');
 final String apiUrl = _defined.isNotEmpty
     ? _defined
     : kReleaseMode
-    ? 'https://api.as.performx.online'
+    ? 'https://api.as.vite.ci'
     : Platform.isAndroid
     ? 'http://10.0.2.2:3100'
     : 'http://127.0.0.1:3100';
