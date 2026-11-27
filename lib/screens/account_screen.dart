@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -10,9 +11,9 @@ import 'reseller_screen.dart';
 import 'shop_form_screen.dart';
 
 const _shopStatus = {'DRAFT': 'Brouillon', 'PENDING': 'En vérification', 'APPROVED': 'En ligne', 'REJECTED': 'À corriger', 'SUSPENDED': 'Suspendue'};
-const _resellerStatus = {'NONE': 'Achetez pour revendre ? Demandez le statut', 'PENDING': 'Demande en vérification', 'APPROVED': 'Prix de gros visibles', 'REJECTED': 'Demande refusée'};
+const _resellerStatus = {'NONE': 'Non demandé', 'PENDING': 'En vérification', 'APPROVED': 'Actif', 'REJECTED': 'Refusé'};
 
-/// Compte : visiteur (invitation à se connecter) ou client (profil, adresses, revendeur, espace vendeur)
+/// Compte façon Réglages : visiteur (connexion) ou client (profil, boutique, revendeur, adresses)
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
   @override
@@ -68,6 +69,25 @@ class _AccountScreenState extends State<AccountScreen> {
     _load();
   }
 
+  Future<void> _reseller() async {
+    if (!await requireAuth(context, reason: 'Connectez-vous pour demander le statut revendeur')) return;
+    if (!mounted) return;
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const ResellerScreen()));
+    _load();
+  }
+
+  Future<void> _logout() async {
+    final ok = await showCupertinoModalPopup<bool>(
+      context: context,
+      builder: (c) => CupertinoActionSheet(
+        message: const Text('Votre panier reste sur ce téléphone.'),
+        actions: [CupertinoActionSheetAction(isDestructiveAction: true, onPressed: () => Navigator.pop(c, true), child: const Text('Se déconnecter'))],
+        cancelButton: CupertinoActionSheetAction(isDefaultAction: true, onPressed: () => Navigator.pop(c, false), child: const Text('Annuler')),
+      ),
+    );
+    if (ok == true) await api.logout();
+  }
+
   Future<void> _addAddress() async {
     final label = TextEditingController(text: 'Maison');
     final address = TextEditingController();
@@ -75,21 +95,32 @@ class _AccountScreenState extends State<AccountScreen> {
     final ok = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       builder: (c) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(c).viewInsets.bottom + 24 + MediaQuery.of(c).padding.bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Nouvelle adresse', style: AppText.headline),
-          const SizedBox(height: 6),
-          const Text('Votre position actuelle est enregistrée avec l’adresse, pour guider le livreur.', style: AppText.bodyMuted),
-          const SizedBox(height: 18),
-          TextField(controller: label, decoration: const InputDecoration(hintText: 'Nom (Maison, Bureau…)')),
-          const SizedBox(height: 10),
-          TextField(controller: address, decoration: const InputDecoration(hintText: 'Commune, quartier')),
-          const SizedBox(height: 10),
-          TextField(controller: landmark, decoration: const InputDecoration(hintText: 'Repère (facultatif)')),
-          const SizedBox(height: 20),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Enregistrer ici')),
-        ]),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
+        child: SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              child: Row(children: [
+                BarButton('Annuler', onTap: () => Navigator.pop(c, false)),
+                const Expanded(child: Text('Nouvelle adresse', textAlign: TextAlign.center, style: AppText.title)),
+                BarButton('Ajouter', bold: true, onTap: () => Navigator.pop(c, true)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Group(children: [
+                  _field(label, 'Nom (Maison, Bureau…)'),
+                  _field(address, 'Commune, quartier'),
+                  _field(landmark, 'Repère (facultatif)'),
+                ]),
+                const SectionFooter('Votre position actuelle est enregistrée avec l’adresse, pour guider le livreur.'),
+              ]),
+            ),
+          ]),
+        ),
       ),
     );
     if (ok != true || !mounted) return;
@@ -104,118 +135,105 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
-  Widget _row(IconData icon, String title, {String? sub, VoidCallback? onTap, Widget? trailing}) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-    leading: Icon(icon, color: AppColors.ink, size: 22),
-    title: Text(title, style: AppText.label.copyWith(fontSize: 14.5)),
-    subtitle: sub == null ? null : Text(sub, style: AppText.caption),
-    trailing: trailing ?? (onTap == null ? null : const Icon(PhosphorIconsRegular.caretRight, size: 16, color: AppColors.faint)),
-    onTap: onTap,
-  );
+  Widget _field(TextEditingController c, String hint) => TextField(controller: c, style: AppText.body, decoration: InputDecoration(hintText: hint, filled: false));
 
-  Widget _guest() => ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), children: [
-    const Text('Compte', style: AppText.display),
-    const SizedBox(height: 22),
-    Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(24)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('BIENVENUE', style: AppText.overline.copyWith(color: Colors.white70)),
-        const SizedBox(height: 8),
-        Text('Connectez-vous pour commander et suivre vos livraisons.', style: AppText.headline.copyWith(color: Colors.white, fontSize: 22)),
-        const SizedBox(height: 18),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.ink),
-          onPressed: () => requireAuth(context),
-          child: const Text('Se connecter ou créer un compte'),
-        ),
-      ]),
-    ),
-    const SectionTitle('Vous vendez à Adjamé ?'),
-    Group(children: [
-      _row(PhosphorIconsLight.storefront, 'Ouvrir ma boutique', sub: 'Mettez vos produits en ligne gratuitement', onTap: () => _openShop()),
-      _row(PhosphorIconsLight.tag, 'Devenir revendeur', sub: 'Accédez aux prix de gros', onTap: () async {
-        if (!await requireAuth(context, reason: 'Connectez-vous pour demander le statut revendeur')) return;
-        if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const ResellerScreen()));
-      }),
+  List<Widget> _sellSections() => [
+    const SectionTitle('Vendre sur Adjamé-Smart'),
+    Group(dividerIndent: 60, children: [
+      for (final s in _shops)
+        Cell(leading: const SettingsIcon(CupertinoIcons.building_2_fill), title: s['name'] as String, value: _shopStatus[s['status']] ?? '', onTap: () => _openShop(Map<String, dynamic>.from(s))),
+      Cell(
+        leading: const SettingsIcon(CupertinoIcons.plus, color: Color(0xFF2F6F7E)),
+        title: _shops.isEmpty ? 'Ouvrir ma boutique' : 'Ouvrir une autre boutique',
+        onTap: () => _openShop(),
+      ),
+      Cell(
+        leading: const SettingsIcon(CupertinoIcons.tag_fill, color: AppColors.accent),
+        title: 'Statut revendeur',
+        value: api.loggedIn ? _resellerStatus[api.user?['resellerStatus']] : null,
+        onTap: _reseller,
+      ),
     ]),
+    const SectionFooter('Vous vendez à Adjamé ? Mettez votre boutique en ligne gratuitement. Vous revendez ? Accédez aux prix de gros.'),
+  ];
+
+  List<Widget> _aboutSection() => [
     const SectionTitle('Adjamé-Smart'),
-    Group(children: [
-      _row(PhosphorIconsLight.moped, 'Livraison par LETO', sub: 'Frais payés en espèces au livreur'),
-      _row(PhosphorIconsLight.shieldCheck, 'Paiement Mobile Money', sub: 'Le colis est remis une fois le paiement confirmé'),
+    Group(dividerIndent: 60, children: const [
+      Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livraison par LETO', subtitle: 'Frais payés en espèces au livreur'),
+      Cell(leading: SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent), title: 'Paiement Mobile Money', subtitle: 'Colis remis une fois le paiement confirmé'),
     ]),
-  ]);
+  ];
 
   @override
   Widget build(BuildContext context) {
-    if (!api.loggedIn) return SafeArea(bottom: false, child: _guest());
     final u = api.user ?? {};
     final name = (u['name'] as String?) ?? '';
     final addresses = ((u['addresses'] as List?) ?? []).cast<Map>();
-    return SafeArea(
-      bottom: false,
-      child: RefreshIndicator(
-        color: AppColors.ink,
-        onRefresh: _load,
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), children: [
-          const Text('Compte', style: AppText.display),
-          const SizedBox(height: 20),
-          Row(children: [
-            Container(
-              width: 60,
-              height: 60,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-              child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: AppText.headline.copyWith(color: Colors.white, fontSize: 26)),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(name, style: AppText.title.copyWith(fontSize: 19)),
-                const SizedBox(height: 2),
-                Text(formatPhone(u['phone'] as String?), style: AppText.caption),
+    final logged = api.loggedIn;
+    return Scaffold(
+      body: CustomScrollView(physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()), slivers: [
+        const LargeTitleBar('Compte'),
+        if (logged) CupertinoSliverRefreshControl(onRefresh: _load),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 90),
+          sliver: SliverList.list(children: [
+            // Profil (style identifiant Apple)
+            Group(children: [
+              logged
+                  ? Cell(
+                      leading: Container(
+                        width: 58,
+                        height: 58,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                        child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: AppText.title1.copyWith(color: Colors.white, fontSize: 24)),
+                      ),
+                      title: name,
+                      subtitle: [formatPhone(u['phone'] as String?), if (u['resellerStatus'] == 'APPROVED') 'Revendeur'].join(' · '),
+                    )
+                  : Cell(
+                      leading: const Icon(CupertinoIcons.person_crop_circle_fill, size: 58, color: AppColors.faint),
+                      title: 'Se connecter ou créer un compte',
+                      titleColor: AppColors.primary,
+                      subtitle: 'Commandez et suivez vos livraisons',
+                      onTap: () => requireAuth(context),
+                    ),
+            ]),
+            ..._sellSections(),
+            if (logged) ...[
+              const SectionTitle('Adresses de livraison'),
+              Group(dividerIndent: 52, children: [
+                for (final a in addresses)
+                  Cell(
+                    leading: const Icon(CupertinoIcons.location_fill, color: AppColors.primary, size: 22),
+                    title: a['label'] as String,
+                    subtitle: [a['address'], a['landmark']].where((x) => (x ?? '').toString().isNotEmpty).join(' · '),
+                    trailing: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 36),
+                      onPressed: () async {
+                        try {
+                          await api.removeAddress(a['id'] as String);
+                          if (mounted) setState(() {});
+                        } catch (e) {
+                          if (context.mounted) showError(context, e);
+                        }
+                      },
+                      child: const Icon(CupertinoIcons.trash, size: 19, color: AppColors.muted),
+                    ),
+                  ),
+                Cell(leading: const Icon(CupertinoIcons.plus_circle_fill, color: AppColors.primary, size: 22), title: 'Ajouter une adresse', titleColor: AppColors.primary, onTap: _addAddress, trailing: const SizedBox.shrink()),
               ]),
-            ),
-            if (u['resellerStatus'] == 'APPROVED') const Pill('Revendeur', background: AppColors.accent),
+            ],
+            ..._aboutSection(),
+            if (logged) ...[
+              const SizedBox(height: 32),
+              Group(children: [Cell(title: 'Se déconnecter', titleColor: AppColors.danger, center: true, onTap: _logout)]),
+            ],
           ]),
-          const SectionTitle('Ma boutique'),
-          Group(children: [
-            for (final s in _shops)
-              _row(PhosphorIconsLight.storefront, s['name'] as String, sub: _shopStatus[s['status']] ?? '', onTap: () => _openShop(Map<String, dynamic>.from(s))),
-            _row(PhosphorIconsLight.plusCircle, _shops.isEmpty ? 'Ouvrir ma boutique' : 'Ouvrir une autre boutique', sub: 'Vous vendez à Adjamé ? Mettez-la en ligne', onTap: () => _openShop()),
-          ]),
-          const SectionTitle('Revendeur'),
-          Group(children: [
-            _row(PhosphorIconsLight.tag, 'Statut revendeur', sub: _resellerStatus[u['resellerStatus']] ?? '', onTap: () async {
-              await Navigator.push(context, MaterialPageRoute(builder: (_) => const ResellerScreen()));
-              _load();
-            }),
-          ]),
-          const SectionTitle('Adresses de livraison'),
-          Group(children: [
-            for (final a in addresses)
-              _row(
-                PhosphorIconsLight.mapPin,
-                a['label'] as String,
-                sub: [a['address'], a['landmark']].where((x) => (x ?? '').toString().isNotEmpty).join(' · '),
-                trailing: IconButton(
-                  icon: const Icon(PhosphorIconsLight.trash, size: 20, color: AppColors.muted),
-                  onPressed: () async {
-                    try {
-                      await api.removeAddress(a['id'] as String);
-                      if (mounted) setState(() {});
-                    } catch (e) {
-                      if (context.mounted) showError(context, e);
-                    }
-                  },
-                ),
-              ),
-            _row(PhosphorIconsLight.plusCircle, 'Ajouter une adresse', onTap: _addAddress),
-          ]),
-          const SizedBox(height: 28),
-          OutlinedButton(onPressed: () => api.logout(), child: const Text('Se déconnecter')),
-        ]),
-      ),
+        ),
+      ]),
     );
   }
 }

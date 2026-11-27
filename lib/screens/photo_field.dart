@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -120,7 +121,7 @@ class _PhotoFieldState extends State<PhotoField> {
                     Container(
                       color: Colors.black38,
                       child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CupertinoActivityIndicator(color: Colors.white),
                       ),
                     ),
                 ],

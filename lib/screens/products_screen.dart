@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -148,7 +149,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     body: RefreshIndicator(
       onRefresh: _load,
       child: _items == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CupertinoActivityIndicator())
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [

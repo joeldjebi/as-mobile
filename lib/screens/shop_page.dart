@@ -1,5 +1,5 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
@@ -41,80 +41,70 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  Widget _info(IconData icon, String title, String? sub, {VoidCallback? onTap, Widget? trailing}) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-    leading: Icon(icon, color: AppColors.ink, size: 22),
-    title: Text(title, style: AppText.label.copyWith(fontSize: 14.5)),
-    subtitle: sub == null || sub.isEmpty ? null : Text(sub, style: AppText.caption),
-    trailing: trailing,
-    onTap: onTap,
-  );
-
   @override
   Widget build(BuildContext context) {
     final s = _s;
     final top = MediaQuery.of(context).padding.top;
+    final back = Positioned(top: top + 6, left: 16, child: RoundIconButton(CupertinoIcons.chevron_back, onTap: () => Navigator.pop(context)));
     if (s == null) {
       return Scaffold(
+        backgroundColor: AppColors.surface,
         body: Stack(children: [
-          Center(
-            child: _failed
-                ? EmptyState(icon: PhosphorIconsLight.wifiSlash, title: 'Boutique indisponible', text: 'Vérifiez votre connexion puis réessayez.', action: 'Réessayer', onAction: _load)
-                : const CircularProgressIndicator(color: AppColors.ink, strokeWidth: 2),
-          ),
-          Positioned(top: top + 8, left: 16, child: RoundIconButton(PhosphorIconsRegular.arrowLeft, onTap: () => Navigator.pop(context))),
+          Center(child: _failed ? EmptyState(icon: CupertinoIcons.wifi_slash, title: 'Boutique indisponible', text: 'Vérifiez votre connexion Internet puis réessayez.', action: 'Réessayer', onAction: _load) : const Loader()),
+          back,
         ]),
       );
     }
     final hours = s['hours'] as Map?;
     final open = s['isOpen'] != false;
     return Scaffold(
-      body: CustomScrollView(slivers: [
+      backgroundColor: AppColors.surface,
+      body: CustomScrollView(physics: const BouncingScrollPhysics(), slivers: [
         SliverToBoxAdapter(
           child: Stack(clipBehavior: Clip.none, children: [
-            AspectRatio(aspectRatio: 4 / 3, child: NetImage(s['storefrontUrl'] as String?, placeholder: PhosphorIconsLight.storefront)),
-            Positioned(top: top + 8, left: 16, child: RoundIconButton(PhosphorIconsRegular.arrowLeft, onTap: () => Navigator.pop(context))),
+            AspectRatio(aspectRatio: 16 / 11, child: NetImage(s['storefrontUrl'] as String?, placeholder: CupertinoIcons.building_2_fill)),
+            back,
             Positioned(
               left: 20,
-              bottom: -36,
+              bottom: -34,
               child: Container(
                 width: 76,
                 height: 76,
-                decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle, border: Border.all(color: AppColors.background, width: 4)),
+                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.surface, width: 3), boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))]),
                 clipBehavior: Clip.antiAlias,
-                child: NetImage(s['logoUrl'] as String?, placeholder: PhosphorIconsLight.storefront),
+                child: ClipRRect(borderRadius: BorderRadius.circular(15), child: NetImage(s['logoUrl'] as String?, placeholder: CupertinoIcons.building_2_fill)),
               ),
             ),
           ]),
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 48, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 46, 20, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text([s['type'] == 'GROSSISTE' ? 'GROSSISTE' : 'BOUTIQUE', (s['market'] as String?)?.toUpperCase()].whereType<String>().join(' · '), style: AppText.overline),
-              const SizedBox(height: 6),
-              Text(s['name'] as String, style: AppText.display.copyWith(fontSize: 30)),
+              Text(s['name'] as String, style: AppText.title1),
+              const SizedBox(height: 2),
+              Text([s['type'] == 'GROSSISTE' ? 'Grossiste' : 'Boutique', s['market']].whereType<String>().join(' · '), style: AppText.bodyMuted),
               const SizedBox(height: 10),
               Row(children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: open ? AppColors.success : AppColors.faint, shape: BoxShape.circle)),
-                const SizedBox(width: 8),
-                Text(open ? 'Ouverte' : 'Fermée pour le moment', style: AppText.label.copyWith(color: open ? AppColors.success : AppColors.muted)),
-                if (hours != null) Text('  ·  ${hours['open']} – ${hours['close']}', style: AppText.caption),
+                Icon(CupertinoIcons.circle_fill, size: 9, color: open ? AppColors.success : AppColors.faint),
+                const SizedBox(width: 6),
+                Text(open ? 'Ouverte' : 'Fermée', style: AppText.label.copyWith(color: open ? AppColors.success : AppColors.muted)),
+                if (hours != null) Text('  ·  ${hours['open']} – ${hours['close']}', style: AppText.bodyMuted),
               ]),
               if ((s['description'] ?? '').toString().isNotEmpty) ...[
                 const SizedBox(height: 14),
-                Text(s['description'] as String, style: AppText.bodyMuted),
+                Text(s['description'] as String, style: AppText.subhead.copyWith(height: 1.4)),
               ],
               const SizedBox(height: 20),
-              Group(children: [
-                _info(PhosphorIconsLight.mapPin, (s['location'] as String?) ?? 'Adjamé', s['market'] as String?),
-                if (hours != null) _info(PhosphorIconsLight.clock, '${hours['open']} – ${hours['close']}', (hours['days'] as List).map((d) => _days[d as int]).join(', ')),
+              Group(color: AppColors.surfaceAlt, dividerIndent: 52, children: [
+                Cell(leading: const Icon(CupertinoIcons.location_fill, color: AppColors.primary, size: 22), title: (s['location'] as String?) ?? 'Adjamé', subtitle: s['market'] as String?),
+                if (hours != null) Cell(leading: const Icon(CupertinoIcons.clock_fill, color: AppColors.primary, size: 22), title: '${hours['open']} – ${hours['close']}', subtitle: (hours['days'] as List).map((d) => _days[d as int]).join(', ')),
                 if (s['phone'] != null)
-                  _info(
-                    PhosphorIconsLight.phone,
-                    formatPhone(s['phone'] as String),
-                    'Appeler la boutique',
-                    trailing: const Icon(PhosphorIconsRegular.arrowUpRight, size: 18, color: AppColors.muted),
+                  Cell(
+                    leading: const Icon(CupertinoIcons.phone_fill, color: AppColors.primary, size: 22),
+                    title: formatPhone(s['phone'] as String),
+                    subtitle: 'Appeler la boutique',
+                    trailing: const Icon(CupertinoIcons.arrow_up_right, size: 16, color: AppColors.faint),
                     onTap: () => launchUrl(Uri.parse('tel:${s['phone']}')),
                   ),
               ]),
@@ -123,11 +113,11 @@ class _ShopPageState extends State<ShopPage> {
         ),
         SliverToBoxAdapter(child: SectionHeader(_products == null ? 'Produits' : '${_products!.length} ${_products!.length > 1 ? 'produits' : 'produit'}')),
         if (_products == null)
-          const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(color: AppColors.ink, strokeWidth: 2))))
+          const SliverToBoxAdapter(child: Loader())
         else if (_products!.isEmpty)
-          const SliverToBoxAdapter(child: EmptyState(icon: PhosphorIconsLight.package, title: 'Bientôt en rayon', text: 'Cette boutique ajoute ses produits.'))
+          const SliverToBoxAdapter(child: EmptyState(icon: CupertinoIcons.cube_box, title: 'Bientôt en rayon', text: 'Cette boutique ajoute ses produits.'))
         else
-          SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 20), sliver: ProductSliverGrid(_products!)),
+          SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 16), sliver: ProductSliverGrid(_products!)),
         SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.of(context).padding.bottom)),
       ]),
     );

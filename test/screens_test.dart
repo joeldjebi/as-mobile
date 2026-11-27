@@ -46,9 +46,10 @@ void main() {
     Cart.instance.add(CartItem(productId: 'p2', variantId: 'v1', variantLabel: 'Taille M', name: 'Robe', price: 8000, shopId: 's2', shopName: 'Mode Adjamé'));
     await t.pumpWidget(app(CartScreen(onBrowse: () {})));
     await t.pump();
-    expect(find.text('Awa Pagnes'), findsOneWidget);
-    expect(find.text('Mode Adjamé'), findsOneWidget);
-    expect(find.text('3 articles · 2 boutiques'), findsOneWidget);
+    expect(find.text('AWA PAGNES · 2 ARTICLES'), findsOneWidget);
+    expect(find.text('MODE ADJAMÉ · 1 ARTICLE'), findsOneWidget);
+    expect(find.text('Articles (3)'), findsOneWidget);
+    expect(find.text('Livraisons (2)'), findsOneWidget);
     await t.tap(find.text('Passer la commande'));
     await t.pumpAndSettle();
     expect(find.text('Connectez-vous pour finaliser votre commande'), findsOneWidget);

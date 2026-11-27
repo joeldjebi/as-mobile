@@ -1,9 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'home_screen.dart' show categoryIcon;
 import 'product_card.dart';
 
 const _sorts = {'new': 'Nouveautés', 'popular': 'Populaires', 'price_asc': 'Prix croissant', 'price_desc': 'Prix décroissant'};
@@ -13,7 +14,7 @@ class SearchScreen extends StatefulWidget {
   final String? categoryId;
   final String? categoryName;
   final String sort;
-  /// Onglet de la barre du bas (pas de bouton retour)
+  /// Onglet de la barre du bas (catégories proposées, pas de retour)
   final bool embedded;
   const SearchScreen({super.key, this.categoryId, this.categoryName, this.sort = 'new', this.embedded = false});
   @override
@@ -28,6 +29,7 @@ class _SearchScreenState extends State<SearchScreen> {
   int? _min;
   int? _max;
   final List<dynamic> _items = [];
+  List<dynamic>? _cats;
   int _page = 0;
   int _pages = 1;
   int _total = 0;
@@ -38,6 +40,9 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _search();
+    if (widget.embedded) {
+      Api.instance.categories().then((c) => mounted ? setState(() => _cats = c) : null).catchError((_) => null);
+    }
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 500) _more();
     });
@@ -58,6 +63,8 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_max != null) 'maxPrice': '$_max',
     'sort': _sort,
   };
+
+  bool get _browsing => widget.embedded && _q.text.trim().isEmpty && _activeFilters == 0;
 
   Future<void> _search() async {
     setState(() { _items.clear(); _page = 0; _pages = 1; _failed = false; });
@@ -91,44 +98,49 @@ class _SearchScreenState extends State<SearchScreen> {
     final ok = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       builder: (c) => StatefulBuilder(
         builder: (c, set) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(c).viewInsets.bottom + 24 + MediaQuery.of(c).padding.bottom),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              const Expanded(child: Text('Filtres', style: AppText.headline)),
-              TextButton(
-                onPressed: () => set(() { min.clear(); max.clear(); sort = 'new'; wholesale = false; }),
-                child: const Text('Effacer'),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
+          child: SafeArea(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                child: Row(children: [
+                  BarButton('Effacer', onTap: () => set(() { min.clear(); max.clear(); sort = widget.sort; wholesale = false; })),
+                  const Expanded(child: Text('Filtres', textAlign: TextAlign.center, style: AppText.title)),
+                  BarButton('OK', bold: true, onTap: () => Navigator.pop(c, true)),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const SectionTitle('Trier par'),
+                  Group(children: [
+                    for (final e in _sorts.entries)
+                      Cell(
+                        title: e.value,
+                        trailing: sort == e.key ? const Icon(CupertinoIcons.checkmark_alt, color: AppColors.primary, size: 20) : const SizedBox(width: 20),
+                        onTap: () => set(() => sort = e.key),
+                      ),
+                  ]),
+                  const SectionTitle('Prix'),
+                  Group(children: [
+                    _priceRow('Minimum', min),
+                    _priceRow('Maximum', max),
+                  ]),
+                  const SizedBox(height: 26),
+                  Group(children: [
+                    Cell(
+                      title: 'Vente en gros uniquement',
+                      trailing: CupertinoSwitch(value: wholesale, activeTrackColor: AppColors.primary, onChanged: (v) => set(() => wholesale = v)),
+                    ),
+                  ]),
+                  const SectionFooter('Produits proposés avec un prix revendeur.'),
+                ]),
               ),
             ]),
-            const SizedBox(height: 18),
-            const Text('TRIER PAR', style: AppText.overline),
-            const SizedBox(height: 10),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final e in _sorts.entries)
-                ChoiceChip(label: Text(e.value), selected: sort == e.key, showCheckmark: false, onSelected: (_) => set(() => sort = e.key)),
-            ]),
-            const SizedBox(height: 22),
-            const Text('PRIX', style: AppText.overline),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: TextField(controller: min, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Minimum', suffixText: 'F'))),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('—', style: AppText.bodyMuted)),
-              Expanded(child: TextField(controller: max, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Maximum', suffixText: 'F'))),
-            ]),
-            const SizedBox(height: 14),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: wholesale,
-              activeTrackColor: AppColors.primary,
-              onChanged: (v) => set(() => wholesale = v),
-              title: const Text('Vente en gros uniquement', style: AppText.title),
-              subtitle: const Text('Produits avec un prix revendeur', style: AppText.caption),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Voir les résultats')),
-          ]),
+          ),
         ),
       ),
     );
@@ -142,80 +154,83 @@ class _SearchScreenState extends State<SearchScreen> {
     _search();
   }
 
+  Widget _priceRow(String label, TextEditingController c) => Padding(
+    padding: const EdgeInsets.only(left: 16, right: 16),
+    child: Row(children: [
+      SizedBox(width: 110, child: Text(label, style: AppText.body)),
+      Expanded(
+        child: TextField(
+          controller: c,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.end,
+          style: AppText.body,
+          decoration: const InputDecoration(hintText: 'Aucun', suffixText: ' F', filled: false, contentPadding: EdgeInsets.symmetric(vertical: 13)),
+        ),
+      ),
+    ]),
+  );
+
   int get _activeFilters => (_sort != widget.sort ? 1 : 0) + (_wholesale ? 1 : 0) + (_min != null || _max != null ? 1 : 0);
 
   @override
   Widget build(BuildContext context) {
     final title = widget.categoryName ?? (widget.embedded ? 'Rechercher' : _sorts[widget.sort]!);
+    final cats = _cats ?? [];
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          color: AppColors.ink,
-          onRefresh: _search,
-          child: CustomScrollView(controller: _scroll, slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (!widget.embedded) ...[
-                    Align(alignment: Alignment.centerLeft, child: RoundIconButton(PhosphorIconsRegular.arrowLeft, onTap: () => Navigator.pop(context))),
-                    const SizedBox(height: 14),
-                  ] else
-                    const SizedBox(height: 8),
-                  Text(title, style: AppText.display.copyWith(fontSize: 30)),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _q,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _search(),
-                        style: AppText.body,
-                        decoration: InputDecoration(
-                          hintText: widget.categoryName == null ? 'Un produit, une marque…' : 'Rechercher ici',
-                          prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass, color: AppColors.ink, size: 20),
-                          filled: true,
-                          fillColor: AppColors.surface,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: AppColors.line)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: AppColors.line)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: AppColors.ink)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Pressable(
-                      onTap: _filters,
-                      child: Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(color: _activeFilters > 0 ? AppColors.ink : AppColors.surface, shape: BoxShape.circle, border: Border.all(color: _activeFilters > 0 ? AppColors.ink : AppColors.line)),
-                        child: Icon(PhosphorIconsRegular.slidersHorizontal, color: _activeFilters > 0 ? Colors.white : AppColors.ink, size: 21),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 18),
-                  Text(
-                    _loading && _items.isEmpty ? 'Recherche…' : '$_total ${_total > 1 ? 'articles' : 'article'} · ${_sorts[_sort]}',
-                    style: AppText.caption,
-                  ),
-                  const SizedBox(height: 14),
-                ]),
-              ),
-            ),
-            if (_failed && _items.isEmpty)
-              SliverToBoxAdapter(child: EmptyState(icon: PhosphorIconsLight.wifiSlash, title: 'Connexion impossible', text: 'Vérifiez votre connexion puis réessayez.', action: 'Réessayer', onAction: _search))
-            else if (_items.isEmpty && !_loading)
-              const SliverToBoxAdapter(child: EmptyState(icon: PhosphorIconsLight.magnifyingGlass, title: 'Aucun résultat', text: 'Essayez un autre mot ou retirez des filtres.'))
-            else
-              SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 20), sliver: ProductSliverGrid(_items)),
-            if (_loading)
-              const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(color: AppColors.ink, strokeWidth: 2)))),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
-          ]),
+      backgroundColor: AppColors.surface,
+      body: CustomScrollView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()), slivers: [
+        LargeTitleBar(
+          title,
+          background: AppColors.surface,
+          trailing: BarButton(_activeFilters > 0 ? 'Filtres ($_activeFilters)' : 'Filtres', onTap: _filters),
         ),
-      ),
+        CupertinoSliverRefreshControl(onRefresh: _search),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: CupertinoSearchTextField(
+              controller: _q,
+              placeholder: widget.categoryName == null ? 'Produits, marques, boutiques' : 'Rechercher dans ${widget.categoryName}',
+              style: AppText.body,
+              onSubmitted: (_) => _search(),
+              onSuffixTap: () {
+                _q.clear();
+                _search();
+              },
+            ),
+          ),
+        ),
+        if (_browsing && cats.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SectionHeader('Catégories')),
+          SliverList.separated(
+            itemCount: cats.length,
+            separatorBuilder: (_, _) => const Divider(indent: 62),
+            itemBuilder: (_, i) {
+              final c = cats[i] as Map;
+              return Cell(
+                leading: Icon(categoryIcon(c['icon'] as String?), color: AppColors.primary, size: 26),
+                title: c['name'] as String,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen(categoryId: c['id'] as String, categoryName: c['name'] as String))),
+              );
+            },
+          ),
+          const SliverToBoxAdapter(child: SectionHeader('Nouveautés')),
+        ] else
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Text(_loading && _items.isEmpty ? 'Recherche…' : '$_total ${_total > 1 ? 'résultats' : 'résultat'} · ${_sorts[_sort]}', style: AppText.caption),
+            ),
+          ),
+        if (_failed && _items.isEmpty)
+          SliverToBoxAdapter(child: EmptyState(icon: CupertinoIcons.wifi_slash, title: 'Pas de connexion', text: 'Vérifiez votre connexion Internet puis réessayez.', action: 'Réessayer', onAction: _search))
+        else if (_items.isEmpty && !_loading)
+          SliverToBoxAdapter(child: EmptyState(icon: CupertinoIcons.search, title: 'Aucun résultat', text: _q.text.trim().isEmpty ? 'Retirez des filtres pour voir plus de produits.' : 'Aucun résultat pour « ${_q.text.trim()} ». Vérifiez l’orthographe ou essayez un autre mot.'))
+        else
+          SliverPadding(padding: const EdgeInsets.symmetric(horizontal: 16), sliver: ProductSliverGrid(_items)),
+        if (_loading) const SliverToBoxAdapter(child: Loader()),
+        SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + (widget.embedded ? 90 : 24))),
+      ]),
     );
   }
 }

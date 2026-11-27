@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -294,7 +295,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: _uploading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(child: CupertinoActivityIndicator())
                         : const Icon(
                             PhosphorIconsBold.plus,
                             color: AppColors.primary,
