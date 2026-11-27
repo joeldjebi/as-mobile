@@ -186,7 +186,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Cell(title: 'Articles', value: formatMoney(s['goodsTotal'] as num)),
                     Cell(title: 'À payer à la commande', trailing: Text(formatMoney(s['dueNow'] as num), style: AppText.price)),
                     if ((s['dueOnDelivery'] as num) > 0) Cell(title: 'Reste à la livraison', value: formatMoney(s['dueOnDelivery'] as num)),
-                    Cell(title: 'Livraison LETO', value: s['deliveryFeeEstimate'] == null ? 'Au livreur' : '≈ ${formatMoney(s['deliveryFeeEstimate'] as num)}'),
+                    Cell(title: 'Livraison VITE', value: s['deliveryFeeEstimate'] == null ? 'Au livreur' : '≈ ${formatMoney(s['deliveryFeeEstimate'] as num)}'),
                     Cell(title: 'Paiement reçu par', value: (s['payment'] as Map)['payee'] as String),
                   ]),
                 ],
@@ -199,7 +199,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     value: formatMoney((q['dueOnDelivery'] as num) + (fee ?? 0)),
                   ),
                 ]),
-                const SectionFooter('Après la commande, payez par Mobile Money et indiquez la référence reçue par SMS. Dès que le paiement est confirmé, un livreur LETO est envoyé à la boutique. Une livraison par boutique.'),
+                const SectionFooter('Après la commande, payez par Mobile Money et indiquez la référence reçue par SMS. Dès que le paiement est confirmé, un livreur VITE est envoyé à la boutique. Une livraison par boutique.'),
               ],
             ]),
           ),
@@ -497,7 +497,7 @@ class _OrderScreenState extends State<OrderScreen> {
     final driver = d['driver'] as Map?;
     final fee = d['price'] as num?;
     return [
-      const SectionTitle('Livraison LETO'),
+      const SectionTitle('Livraison VITE'),
       Group(dividerIndent: 56, children: [
         Cell(leading: const SettingsIcon(PhosphorIconsFill.moped), title: (o['deliveryLabel'] as String?) ?? 'En livraison', subtitle: driver == null ? 'Un livreur va accepter la course' : null),
         if (driver != null)
@@ -580,7 +580,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 icon: CupertinoIcons.checkmark_seal_fill,
                 color: AppColors.success,
                 title: 'Paiement confirmé',
-                text: (o['delivery'] as Map?)?['error'] != null ? 'La demande de livreur va être relancée.' : 'Un livreur LETO est demandé pour récupérer votre colis.',
+                text: (o['delivery'] as Map?)?['error'] != null ? 'La demande de livreur va être relancée.' : 'Un livreur VITE est demandé pour récupérer votre colis.',
               ),
             ],
             if (status == 'IN_DELIVERY' || status == 'DELIVERED') ..._deliveryBlock(o),
@@ -670,7 +670,7 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
     try {
       await Api.instance.shopOrderAction(o['id'] as String, action, note);
       HapticFeedback.mediumImpact();
-      if (mounted) showInfo(context, action == 'confirm-payment' ? 'Paiement confirmé : livreur LETO demandé' : 'Commande mise à jour');
+      if (mounted) showInfo(context, action == 'confirm-payment' ? 'Paiement confirmé : livreur VITE demandé' : 'Commande mise à jour');
       _load();
     } catch (e) {
       if (mounted) showError(context, e);
@@ -724,7 +724,7 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
         if (status == 'AWAITING_PAYMENT') ...[const SizedBox(height: 8), Text('En attente du paiement du client.', style: AppText.caption)],
         if (status == 'PAID') ...[
           const SizedBox(height: 8),
-          Text(d['error'] != null ? 'Livreur non demandé : ${d['error']}' : 'Livreur LETO demandé : préparez le colis.', style: AppText.caption.copyWith(color: AppColors.ink)),
+          Text(d['error'] != null ? 'Livreur non demandé : ${d['error']}' : 'Livreur VITE demandé : préparez le colis.', style: AppText.caption.copyWith(color: AppColors.ink)),
           if (d['error'] != null) ...[const SizedBox(height: 8), FilledButton(onPressed: () => _act(o, 'retry-delivery'), child: const Text('Relancer la livraison'))],
         ],
         if (status == 'IN_DELIVERY') ...[

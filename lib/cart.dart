@@ -46,7 +46,7 @@ class Cart extends ChangeNotifier {
   int get dueNow => items.fold(0, (t, i) => t + i.dueNow);
   int get dueOnDelivery => items.fold(0, (t, i) => t + i.dueOnDelivery);
 
-  /// Articles groupés par boutique (une livraison LETO par boutique)
+  /// Articles groupés par boutique (une livraison VITE par boutique)
   Map<String, List<CartItem>> get byShop {
     final m = <String, List<CartItem>>{};
     for (final i in items) {

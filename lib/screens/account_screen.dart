@@ -125,7 +125,7 @@ class _AccountScreenState extends State<AccountScreen> {
   List<Widget> _aboutSection() => [
     const SectionTitle('Adjamé-Smart'),
     Group(dividerIndent: 60, children: const [
-      Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livraison par LETO', subtitle: 'Frais payés en espèces au livreur'),
+      Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livraison par VITE', subtitle: 'Frais payés en espèces au livreur'),
       Cell(leading: SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent), title: 'Paiement Mobile Money', subtitle: 'Colis remis une fois le paiement confirmé'),
     ]),
   ];

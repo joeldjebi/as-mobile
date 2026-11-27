@@ -505,7 +505,7 @@ class _DiscoverTabState extends State<DiscoverTab> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Group(color: AppColors.surfaceAlt, dividerIndent: 60, children: const [
-                Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livré par LETO', subtitle: 'Une course par boutique, frais payés au livreur'),
+                Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livré par VITE', subtitle: 'Une course par boutique, frais payés au livreur'),
                 Cell(leading: SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent), title: 'Paiement Mobile Money', subtitle: 'Colis remis une fois le paiement confirmé'),
                 Cell(leading: SettingsIcon(CupertinoIcons.checkmark_shield_fill, color: Color(0xFF2F6F7E)), title: 'Boutiques vérifiées', subtitle: 'Chaque vendeur est contrôlé par notre équipe'),
               ]),

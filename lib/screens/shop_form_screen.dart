@@ -507,7 +507,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
                 ),
             ]),
             SectionFooter(_payout == 'DIRECT'
-                ? 'Le client vous paie directement. Vous confirmez la réception dans « Commandes reçues » : la livraison LETO part aussitôt.'
+                ? 'Le client vous paie directement. Vous confirmez la réception dans « Commandes reçues » : la livraison VITE part aussitôt.'
                 : 'Le client paie Adjamé-Smart, qui confirme la réception puis vous reverse le montant.'),
             const SectionTitle('Photos de la boutique'),
             Row(

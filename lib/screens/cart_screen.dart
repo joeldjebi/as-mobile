@@ -8,7 +8,7 @@ import '../widgets.dart';
 import 'auth_screen.dart';
 import 'orders_screen.dart';
 
-/// Panier : articles groupés par boutique (une livraison LETO par boutique). La connexion est demandée ici, à la commande.
+/// Panier : articles groupés par boutique (une livraison VITE par boutique). La connexion est demandée ici, à la commande.
 class CartScreen extends StatelessWidget {
   final VoidCallback onBrowse;
   const CartScreen({super.key, required this.onBrowse});
@@ -86,8 +86,8 @@ class CartScreen extends StatelessWidget {
                 ]),
                 if (cart.dueOnDelivery > 0) const SectionFooter('Certaines boutiques demandent seulement un acompte à la commande : le reste est payé à la livraison.'),
                 SectionFooter(groups.length > 1
-                    ? 'Une livraison LETO par boutique. Les frais de livraison sont payés en espèces à chaque livreur.'
-                    : 'Les frais de livraison LETO sont payés en espèces au livreur.'),
+                    ? 'Une livraison VITE par boutique. Les frais de livraison sont payés en espèces à chaque livreur.'
+                    : 'Les frais de livraison VITE sont payés en espèces au livreur.'),
                 const SizedBox(height: 8),
                 Row(children: [
                   const SizedBox(width: 16),

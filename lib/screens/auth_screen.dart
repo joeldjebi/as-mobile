@@ -94,7 +94,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(widget.reason ?? 'Les boutiques d’Adjamé, livrées chez vous par LETO.', textAlign: TextAlign.center, style: AppText.bodyMuted),
+              child: Text(widget.reason ?? 'Les boutiques d’Adjamé, livrées chez vous par VITE.', textAlign: TextAlign.center, style: AppText.bodyMuted),
             ),
             const SizedBox(height: 26),
             CupertinoSlidingSegmentedControl<bool>(

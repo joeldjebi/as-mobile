@@ -274,7 +274,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     subtitle: [shop['type'] == 'GROSSISTE' ? 'Grossiste' : 'Boutique', shop['market']].whereType<String>().join(' · '),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShopPage(slug: shop['slug'] as String))),
                   ),
-                const Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livré par LETO', subtitle: 'Frais de livraison payés en espèces au livreur'),
+                const Cell(leading: SettingsIcon(PhosphorIconsFill.moped), title: 'Livré par VITE', subtitle: 'Frais de livraison payés en espèces au livreur'),
                 Cell(
                   leading: const SettingsIcon(CupertinoIcons.creditcard, color: AppColors.accent),
                   title: prepay >= 100 ? 'Payé en entier à la commande' : 'Acompte de $prepay % à la commande',
