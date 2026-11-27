@@ -106,6 +106,11 @@ class CartScreen extends StatelessWidget {
     ),
   );
 
+  static String _groupTitle(List<CartItem> g) {
+    final n = g.fold<int>(0, (t, i) => t + i.qty);
+    return '${g.first.shopName} · $n ${n > 1 ? 'articles' : 'article'}';
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Cart.instance,
@@ -150,9 +155,7 @@ class CartScreen extends StatelessWidget {
                     sliver: SliverList.list(
                       children: [
                         for (final g in groups) ...[
-                          SectionTitle(
-                            '${g.first.shopName} · ${g.fold<int>(0, (t, i) => t + i.qty)} ${g.fold<int>(0, (t, i) => t + i.qty) > 1 ? 'articles' : 'article'}',
-                          ),
+                          SectionTitle(_groupTitle(g)),
                           Group(
                             dividerIndent: 88,
                             children: [for (final i in g) _line(i)],
@@ -165,20 +168,22 @@ class CartScreen extends StatelessWidget {
                               title: 'Articles (${cart.count})',
                               value: formatMoney(cart.total),
                             ),
-                            Cell(
-                              title: 'À payer à la commande',
-                              subtitle: 'Mobile Money',
-                              trailing: Text(
-                                formatMoney(cart.dueNow),
-                                style: AppText.price,
+                            // Sans acompte, le montant à payer est celui des articles
+                            if (cart.dueOnDelivery > 0) ...[
+                              Cell(
+                                title: 'À payer à la commande',
+                                subtitle: 'Mobile Money',
+                                trailing: Text(
+                                  formatMoney(cart.dueNow),
+                                  style: AppText.price,
+                                ),
                               ),
-                            ),
-                            if (cart.dueOnDelivery > 0)
                               Cell(
                                 title: 'Reste à la livraison',
                                 subtitle: 'Au livreur, à la remise',
                                 value: formatMoney(cart.dueOnDelivery),
                               ),
+                            ],
                             Cell(
                               title: groups.length > 1
                                   ? 'Livraisons (${groups.length})'
@@ -187,14 +192,10 @@ class CartScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        if (cart.dueOnDelivery > 0)
-                          const SectionFooter(
-                            'Certaines boutiques demandent seulement un acompte à la commande : le reste est payé à la livraison.',
-                          ),
                         SectionFooter(
                           groups.length > 1
-                              ? 'Une livraison VITE par boutique. Les frais de livraison sont payés en espèces à chaque livreur.'
-                              : 'Les frais de livraison VITE sont payés en espèces au livreur.',
+                              ? 'Une livraison VITE par boutique, payée en espèces au livreur.'
+                              : 'Livraison VITE payée en espèces au livreur.',
                         ),
                         const SizedBox(height: 8),
                         Row(

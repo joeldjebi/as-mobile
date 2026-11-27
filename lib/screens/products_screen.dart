@@ -158,7 +158,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     padding: EdgeInsets.only(bottom: 12),
                     child: StatusBanner(
                       icon: PhosphorIconsBold.info,
-                      color: AppColors.warning,
+                      color: AppColors.accent,
                       title: 'Boutique pas encore en ligne',
                       text:
                           'Préparez vos produits : ils seront visibles dès que la boutique sera validée.',
@@ -183,14 +183,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           child: SizedBox(
                             width: 56,
                             height: 56,
-                            child: (p['photos'] as List).isEmpty
-                                ? Container(color: AppColors.background)
-                                : Image.network(
-                                    photoUrl(p['photos'][0]),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) =>
-                                        Container(color: AppColors.background),
-                                  ),
+                            // Miniature en cache plutôt que la photo pleine taille
+                            child: NetImage(
+                              (p['photos'] as List).firstOrNull as String?,
+                              width: 56,
+                            ),
                           ),
                         ),
                         title: Text(

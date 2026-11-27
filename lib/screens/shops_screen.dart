@@ -269,9 +269,9 @@ class _ShopsScreenState extends State<ShopsScreen> {
             else if (_failed && _items.isEmpty)
               SliverToBoxAdapter(
                 child: EmptyState(
-                  icon: CupertinoIcons.wifi_slash,
-                  title: 'Pas de connexion',
-                  text: 'Vérifiez votre connexion Internet puis réessayez.',
+                  icon: CupertinoIcons.arrow_clockwise,
+                  title: 'Un petit instant',
+                  text: 'Les boutiques arrivent, réessayez dans un instant.',
                   action: 'Réessayer',
                   onAction: _reload,
                 ),

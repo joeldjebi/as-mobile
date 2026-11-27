@@ -71,7 +71,7 @@ class _ResellerScreenState extends State<ResellerScreen> {
           else if (status == 'PENDING')
             const StatusBanner(
               icon: PhosphorIconsBold.hourglassMedium,
-              color: AppColors.warning,
+              color: AppColors.accent,
               title: 'Demande en cours de vérification',
               text: 'Vous serez prévenu dès qu’elle est traitée.',
             )
@@ -79,9 +79,9 @@ class _ResellerScreenState extends State<ResellerScreen> {
             if (status == 'REJECTED') ...[
               StatusBanner(
                 icon: PhosphorIconsFill.info,
-                color: AppColors.warning,
-                title: 'Demande refusée',
-                text: note ?? 'Corrigez votre demande et renvoyez-la.',
+                color: AppColors.accent,
+                title: 'Demande à compléter',
+                text: note ?? 'Complétez votre demande et renvoyez-la.',
               ),
               const SizedBox(height: 12),
             ],

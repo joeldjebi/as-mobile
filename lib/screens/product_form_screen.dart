@@ -243,7 +243,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         if (p?['status'] == 'REMOVED')
           StatusBanner(
             icon: PhosphorIconsFill.warningCircle,
-            color: AppColors.warning,
+            color: AppColors.accent,
             title: 'Retiré par Adjamé-Smart',
             text: p?['moderationNote'] as String?,
           ),
@@ -260,13 +260,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          photoUrl(_photos[i]),
+                        child: SizedBox(
                           width: 96,
                           height: 96,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              Container(width: 96, color: Colors.white),
+                          child: NetImage(_photos[i], width: 96),
                         ),
                       ),
                       Positioned(

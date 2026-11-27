@@ -118,9 +118,9 @@ class _ShopPageState extends State<ShopPage> {
             Center(
               child: _failed
                   ? EmptyState(
-                      icon: CupertinoIcons.wifi_slash,
-                      title: 'Boutique indisponible',
-                      text: 'Vérifiez votre connexion Internet puis réessayez.',
+                      icon: CupertinoIcons.arrow_clockwise,
+                      title: 'Un petit instant',
+                      text: 'La boutique arrive, réessayez dans un instant.',
                       action: 'Réessayer',
                       onAction: _load,
                     )
@@ -220,14 +220,6 @@ class _ShopPageState extends State<ShopPage> {
                             color: open ? AppColors.success : AppColors.muted,
                           ),
                         ),
-                        if (hours != null)
-                          Flexible(
-                            child: Text(
-                              '  ·  ${hours['open']} – ${hours['close']}',
-                              overflow: TextOverflow.ellipsis,
-                              style: AppText.bodyMuted,
-                            ),
-                          ),
                       ],
                     ),
                     if ((s['description'] ?? '').toString().isNotEmpty) ...[
@@ -250,8 +242,8 @@ class _ShopPageState extends State<ShopPage> {
                             color: AppColors.primary,
                             size: 22,
                           ),
+                          // Le marché figure déjà sous le nom de la boutique
                           title: (s['location'] as String?) ?? 'Adjamé',
-                          subtitle: s['market'] as String?,
                         ),
                         if (hours != null)
                           Cell(

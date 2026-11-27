@@ -142,7 +142,7 @@ class _SellerShellState extends State<SellerShell> {
             onTab: (i) => setState(() => _tab = i),
             onChanged: _load,
           ),
-          ShopOrdersScreen(key: key, shop: shop),
+          ShopOrdersScreen(key: key, shop: shop, active: _tab == 1),
           ProductsScreen(key: key, shop: shop),
           ShopFormScreen(key: key, shop: shop),
         ],

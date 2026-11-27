@@ -239,9 +239,9 @@ class _ProductScreenState extends State<ProductScreen> {
             Center(
               child: _failed
                   ? EmptyState(
-                      icon: CupertinoIcons.wifi_slash,
-                      title: 'Produit indisponible',
-                      text: 'Vérifiez votre connexion Internet puis réessayez.',
+                      icon: CupertinoIcons.arrow_clockwise,
+                      title: 'Un petit instant',
+                      text: 'Le produit arrive, réessayez dans un instant.',
                       action: 'Réessayer',
                       onAction: _load,
                     )
@@ -342,23 +342,7 @@ class _ProductScreenState extends State<ProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (shop != null)
-                    GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ShopPage(slug: shop['slug'] as String),
-                        ),
-                      ),
-                      child: Text(
-                        shop['name'] as String,
-                        style: AppText.subhead.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 4),
+                  // La boutique est présentée plus bas (logo, marché, lien)
                   Text(
                     p['name'] as String,
                     style: AppText.title1.copyWith(fontSize: 22),
@@ -382,7 +366,7 @@ class _ProductScreenState extends State<ProductScreen> {
                             ? 'Plus que $stock'
                             : 'En stock',
                         style: AppText.subhead.copyWith(
-                          color: out ? AppColors.warning : AppColors.success,
+                          color: out ? AppColors.muted : AppColors.success,
                         ),
                       ),
                     ],

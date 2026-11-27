@@ -846,10 +846,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
                         ),
                         const SizedBox(width: 6),
                         Expanded(
+                          // Le nombre de produits figure déjà dans l'encart du marché
                           child: Text(
-                            ((h?['totals']?['products'] as num?) ?? 0) > 0
-                                ? 'Rechercher parmi ${h!['totals']['products']} produits'
-                                : 'Rechercher un produit, une boutique',
+                            'Rechercher un produit, une boutique',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppText.body.copyWith(
@@ -867,9 +866,9 @@ class _DiscoverTabState extends State<DiscoverTab> {
           if (_failed)
             SliverToBoxAdapter(
               child: EmptyState(
-                icon: CupertinoIcons.wifi_slash,
-                title: 'Pas de connexion',
-                text: 'Vérifiez votre connexion Internet puis réessayez.',
+                icon: CupertinoIcons.arrow_clockwise,
+                title: 'Un petit instant',
+                text: 'Les nouveautés arrivent, réessayez dans un instant.',
                 action: 'Réessayer',
                 onAction: _load,
               ),

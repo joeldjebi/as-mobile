@@ -139,7 +139,7 @@ class _AddressScreenState extends State<AddressScreen> {
       if (mounted)
         showError(
           context,
-          'Position indisponible : choisissez le quartier ou touchez la carte',
+          'Choisissez votre quartier ou touchez la carte pour vous situer',
         );
     } finally {
       if (mounted) setState(() => _locating = false);
@@ -358,16 +358,16 @@ class _AddressScreenState extends State<AddressScreen> {
                   ),
                   SectionFooter(
                     _pos == null
-                        ? 'Choisissez votre quartier dans la liste, puis touchez la carte à l’endroit exact de la livraison : le livreur ira exactement là.'
+                        ? 'Choisissez votre quartier, puis touchez la carte à l’endroit exact de la livraison.'
                         : spotText == null
-                        ? 'Touchez la carte pour ajuster le point : le livreur ira exactement là.'
-                        : 'Point placé : $spotText. Touchez la carte pour l’ajuster : le livreur ira exactement là.',
+                        ? 'Touchez la carte pour ajuster le point de livraison.'
+                        : 'Point placé : $spotText. Touchez la carte pour l’ajuster.',
                   ),
                   if (_mismatch) ...[
                     const SizedBox(height: 12),
                     StatusBanner(
                       icon: CupertinoIcons.info_circle_fill,
-                      color: AppColors.warning,
+                      color: AppColors.accent,
                       title: 'Vérifiez le point',
                       text:
                           'Le point est à ${_spot!['commune']}, mais vous avez indiqué $_typed.',

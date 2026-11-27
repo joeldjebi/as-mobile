@@ -102,13 +102,9 @@ class _PhotoFieldState extends State<PhotoField> {
                 fit: StackFit.expand,
                 children: [
                   if (_local != null)
-                    Image.file(_local!, fit: BoxFit.cover)
+                    Image.file(_local!, fit: BoxFit.cover, cacheWidth: 480)
                   else if (widget.url != null && !widget.identity)
-                    Image.network(
-                      photoUrl(widget.url!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const SizedBox(),
-                    )
+                    NetImage(widget.url, width: 240)
                   else
                     Icon(
                       has

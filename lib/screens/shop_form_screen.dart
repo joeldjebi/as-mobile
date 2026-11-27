@@ -191,7 +191,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
       if (mounted) {
         showError(
           context,
-          'Position indisponible : placez le repère à la main sur la carte',
+          'Placez le repère sur la carte, à l’endroit de votre magasin',
         );
       }
     }
@@ -217,7 +217,7 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
     return switch (_status) {
       'PENDING' => const StatusBanner(
         icon: PhosphorIconsBold.hourglassMedium,
-        color: AppColors.warning,
+        color: AppColors.accent,
         title: 'Dossier en cours de vérification',
         text:
             'Adjamé-Smart vérifie votre boutique. Vous serez prévenu dès qu’elle est en ligne.',
@@ -227,17 +227,17 @@ class _ShopFormScreenState extends State<ShopFormScreen> {
         color: AppColors.success,
         title: 'Boutique en ligne',
         text:
-            'Les clients la voient dans l’app. L’ajout de produits arrive bientôt.',
+            'Les clients la voient dans l’app : ajoutez vos produits depuis l’onglet Produits.',
       ),
       'REJECTED' => StatusBanner(
         icon: PhosphorIconsFill.info,
-        color: AppColors.warning,
+        color: AppColors.accent,
         title: 'Dossier à corriger',
         text: note ?? 'Corrigez votre dossier puis renvoyez-le.',
       ),
       'SUSPENDED' => StatusBanner(
         icon: PhosphorIconsFill.pauseCircle,
-        color: AppColors.warning,
+        color: AppColors.accent,
         title: 'Boutique suspendue',
         text: note ?? 'Contactez Adjamé-Smart.',
       ),

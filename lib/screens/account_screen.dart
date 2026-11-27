@@ -172,7 +172,7 @@ class _AccountScreenState extends State<AccountScreen> {
       ],
     ),
     const SectionFooter(
-      'Vous vendez à Adjamé ? Mettez votre boutique en ligne gratuitement. Vous revendez ? Accédez aux prix de gros.',
+      'Boutique en ligne gratuite, prix de gros pour les revendeurs.',
     ),
   ];
 

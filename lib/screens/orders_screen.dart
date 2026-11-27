@@ -26,7 +26,7 @@ String orderStatusLabel(Map o) => switch (o['status']) {
   'IN_DELIVERY' => (o['deliveryLabel'] as String?) ?? 'En livraison',
   'DELIVERED' => 'Livrée',
   'CANCELLED' => 'Annulée',
-  'FAILED' => 'Livraison impossible',
+  'FAILED' => 'Livraison à reprogrammer',
   _ => '${o['status']}',
 };
 
@@ -144,7 +144,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
       if (mounted) setState(() => _quote = q);
     } catch (e) {
-      if (mounted) setState(() => _quoteError = e.toString());
+      if (mounted) {
+        setState(
+          () => _quoteError = e is ApiException
+              ? e.message
+              : 'On s’en occupe : réessayez dans un instant.',
+        );
+      }
     }
   }
 
@@ -251,7 +257,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
       SectionFooter(
-        '${vehicles[_vehicle]!.$2}. Payée en espèces au livreur. Un livreur peut proposer un autre prix : vous acceptez, refusez ou faites votre offre.',
+        '${vehicles[_vehicle]!.$2}. Payée en espèces au livreur, qui peut vous proposer un autre prix.',
       ),
     ];
   }
@@ -378,8 +384,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: 18),
                       StatusBanner(
                         icon: CupertinoIcons.info_circle_fill,
-                        color: AppColors.warning,
-                        title: 'Panier à vérifier',
+                        color: AppColors.accent,
+                        title: 'Petit ajustement du panier',
                         text: _quoteError,
                       ),
                     ] else if (q == null)
@@ -418,30 +424,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ],
                         ),
                       ],
-                      const SectionTitle('Total'),
-                      Group(
-                        children: [
-                          Cell(
-                            title: 'Maintenant',
-                            subtitle: 'Mobile Money',
-                            trailing: Text(
-                              formatMoney(q['dueNow'] as num),
-                              style: AppText.price.copyWith(fontSize: 17),
+                      if (shops.length > 1) ...[
+                        const SectionTitle('Total'),
+                        Group(
+                          children: [
+                            Cell(
+                              title: 'Maintenant',
+                              subtitle: 'Mobile Money',
+                              trailing: Text(
+                                formatMoney(q['dueNow'] as num),
+                                style: AppText.price.copyWith(fontSize: 17),
+                              ),
                             ),
-                          ),
-                          Cell(
-                            title: 'À la livraison',
-                            subtitle: fee == null
-                                ? 'Reste de la marchandise + frais du livreur'
-                                : 'Marchandise ${formatMoney(q['dueOnDelivery'] as num)} + livraison ≈ ${formatMoney(fee)}',
-                            value: formatMoney(
-                              (q['dueOnDelivery'] as num) + (fee ?? 0),
+                            Cell(
+                              title: 'À la livraison',
+                              subtitle: fee == null
+                                  ? 'Reste de la marchandise + frais du livreur'
+                                  : 'Marchandise ${formatMoney(q['dueOnDelivery'] as num)} + livraison ≈ ${formatMoney(fee)}',
+                              value: formatMoney(
+                                (q['dueOnDelivery'] as num) + (fee ?? 0),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                       const SectionFooter(
-                        'Après la commande, payez par Mobile Money et indiquez la référence reçue par SMS. Dès que le paiement est confirmé, un livreur VITE est envoyé à la boutique. Une livraison par boutique.',
+                        'Payez ensuite par Mobile Money : la livraison part dès la confirmation.',
                       ),
                     ],
                   ],
@@ -635,9 +643,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (_failed && _orders == null)
             SliverToBoxAdapter(
               child: EmptyState(
-                icon: CupertinoIcons.wifi_slash,
-                title: 'Pas de connexion',
-                text: 'Vérifiez votre connexion Internet puis réessayez.',
+                icon: CupertinoIcons.arrow_clockwise,
+                title: 'Un petit instant',
+                text: 'Vos commandes arrivent, réessayez dans un instant.',
                 action: 'Réessayer',
                 onAction: _load,
               ),
@@ -724,7 +732,8 @@ class _OrderScreenState extends State<OrderScreen> {
     _load();
     // Suivi en direct (paiement en vérification, livreur en route)
     _timer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (['PAYMENT_DECLARED', 'PAID', 'IN_DELIVERY'].contains(_o?['status']))
+      if (_visible &&
+          ['PAYMENT_DECLARED', 'PAID', 'IN_DELIVERY'].contains(_o?['status']))
         _load();
     });
   }
@@ -736,6 +745,9 @@ class _OrderScreenState extends State<OrderScreen> {
     _payer.dispose();
     super.dispose();
   }
+
+  /// Écran au premier plan (pas de rafraîchissement sous le suivi plein écran)
+  bool get _visible => mounted && (ModalRoute.of(context)?.isCurrent ?? true);
 
   Future<void> _load() async {
     try {
@@ -851,10 +863,11 @@ class _OrderScreenState extends State<OrderScreen> {
       if (pay['rejectedNote'] != null) ...[
         const SizedBox(height: 16),
         StatusBanner(
-          icon: CupertinoIcons.exclamationmark_bubble_fill,
-          color: AppColors.warning,
-          title: 'Paiement non reçu',
-          text: '${pay['rejectedNote']}. Vérifiez puis renvoyez la référence.',
+          icon: CupertinoIcons.info_circle_fill,
+          color: AppColors.accent,
+          title: 'Référence à vérifier',
+          text:
+              '${pay['rejectedNote']}. Renvoyez la référence, on s’en occupe.',
         ),
       ],
       const SectionTitle('Payer par Mobile Money'),
@@ -889,7 +902,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ],
       ),
       const SectionFooter(
-        'Envoyez le montant depuis votre application Mobile Money (PI-SPI), puis indiquez ci-dessous la référence reçue par SMS.',
+        'Envoyez le montant depuis votre app Mobile Money, puis saisissez la référence reçue par SMS.',
       ),
       const SectionTitle('Votre paiement'),
       Group(
@@ -963,58 +976,57 @@ class _OrderScreenState extends State<OrderScreen> {
         LiveTrackCard(orderId: o['id'] as String),
         const SizedBox(height: 10),
       ],
-      Group(
-        dividerIndent: 56,
-        children: [
-          Cell(
-            leading: const SettingsIcon(PhosphorIconsFill.moped),
-            title: (o['deliveryLabel'] as String?) ?? 'En livraison',
-            subtitle: driver == null
-                ? 'Un livreur va accepter la course'
-                : null,
-          ),
-          if (driver != null)
-            Cell(
-              leading: const SettingsIcon(
-                CupertinoIcons.person_fill,
-                color: Color(0xFF2F6F7E),
+      if (driver != null || live || o['status'] == 'IN_DELIVERY')
+        Group(
+          dividerIndent: 56,
+          children: [
+            if (driver == null)
+              const Cell(
+                leading: SettingsIcon(PhosphorIconsFill.moped),
+                title: 'Un livreur va accepter la course',
               ),
-              title: driver['name'] as String,
-              subtitle: [
-                driver['vehicleType'] == 'MOTO'
-                    ? 'Moto'
-                    : driver['vehicleType'],
-                driver['plate'],
-              ].whereType<String>().join(' · '),
-              trailing: driver['phone'] == null
-                  ? null
-                  : CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(36, 36),
-                      onPressed: () =>
-                          launchUrl(Uri.parse('tel:${driver['phone']}')),
-                      child: const Icon(
-                        CupertinoIcons.phone_fill,
-                        color: AppColors.primary,
-                        size: 20,
+            if (driver != null)
+              Cell(
+                leading: const SettingsIcon(
+                  CupertinoIcons.person_fill,
+                  color: Color(0xFF2F6F7E),
+                ),
+                title: driver['name'] as String,
+                subtitle: [
+                  driver['vehicleType'] == 'MOTO'
+                      ? 'Moto'
+                      : driver['vehicleType'],
+                  driver['plate'],
+                ].whereType<String>().join(' · '),
+                trailing: driver['phone'] == null
+                    ? null
+                    : CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(36, 36),
+                        onPressed: () =>
+                            launchUrl(Uri.parse('tel:${driver['phone']}')),
+                        child: const Icon(
+                          CupertinoIcons.phone_fill,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
-                    ),
-            ),
-          if (live)
-            Cell(
-              leading: const SettingsIcon(
-                CupertinoIcons.map_fill,
-                color: AppColors.accent,
               ),
-              title: 'Suivre le livreur',
-              onTap: () => Navigator.of(context).push(
-                CupertinoPageRoute(
-                  builder: (_) => TrackScreen(orderId: o['id'] as String),
+            if (live)
+              Cell(
+                leading: const SettingsIcon(
+                  CupertinoIcons.map_fill,
+                  color: AppColors.accent,
+                ),
+                title: 'Suivre le livreur',
+                onTap: () => Navigator.of(context).push(
+                  CupertinoPageRoute(
+                    builder: (_) => TrackScreen(orderId: o['id'] as String),
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
+          ],
+        ),
       if (d['confirmationCode'] != null) ...[
         const SectionTitle('Code de remise'),
         Container(
@@ -1078,10 +1090,10 @@ class _OrderScreenState extends State<OrderScreen> {
               child: Center(
                 child: _failed
                     ? EmptyState(
-                        icon: CupertinoIcons.wifi_slash,
-                        title: 'Commande indisponible',
+                        icon: CupertinoIcons.arrow_clockwise,
+                        title: 'Un petit instant',
                         text:
-                            'Vérifiez votre connexion Internet puis réessayez.',
+                            'Votre commande arrive, réessayez dans un instant.',
                         action: 'Réessayer',
                         onAction: _load,
                       )
@@ -1096,6 +1108,19 @@ class _OrderScreenState extends State<OrderScreen> {
     final pay = (o['payment'] as Map?) ?? {};
     final addr = (o['address'] as Map?) ?? {};
     final items = ((o['items'] as List?) ?? []).cast<Map>();
+    final inDelivery = status == 'IN_DELIVERY' || status == 'DELIVERED';
+    final paidUpfront = (o['dueNow'] as num) != (o['goodsTotal'] as num);
+    // Précision sous le statut (au lieu d'un encadré qui le répète)
+    final note = switch (status) {
+      'PAYMENT_DECLARED' =>
+        '${pay['payee']} vérifie la réception (réf. ${pay['reference']}). La livraison part dès la confirmation.',
+      'PAID' => 'Un livreur VITE arrive à la boutique pour votre colis.',
+      'DELIVERED' => 'Merci pour votre achat sur Adjamé-Smart.',
+      'CANCELLED' => o['cancelReason'] as String?,
+      'FAILED' =>
+        'La boutique vous contacte pour convenir d’une nouvelle livraison.',
+      _ => null,
+    };
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -1138,6 +1163,10 @@ class _OrderScreenState extends State<OrderScreen> {
                         '${o['shopName']} · ${_date(o['createdAt'] as String?)}',
                         style: AppText.caption,
                       ),
+                      if (note != null && note.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(note, style: AppText.subhead),
+                      ],
                       if (!['CANCELLED', 'FAILED'].contains(status)) ...[
                         const SizedBox(height: 14),
                         _steps(status),
@@ -1146,57 +1175,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   ),
                 ),
                 if (status == 'AWAITING_PAYMENT') ..._paymentBlock(o),
-                if (status == 'PAYMENT_DECLARED') ...[
-                  const SizedBox(height: 16),
-                  StatusBanner(
-                    icon: CupertinoIcons.clock_fill,
-                    color: AppColors.primary,
-                    title: 'Paiement en vérification',
-                    text:
-                        '${pay['payee']} vérifie la réception (réf. ${pay['reference']}). La livraison partira dès la confirmation.',
-                  ),
-                ],
-                if (status == 'PAID') ...[
-                  const SizedBox(height: 16),
-                  StatusBanner(
-                    icon: CupertinoIcons.checkmark_seal_fill,
-                    color: AppColors.success,
-                    title: 'Paiement confirmé',
-                    text: (o['delivery'] as Map?)?['error'] != null
-                        ? 'La demande de livreur va être relancée.'
-                        : 'Un livreur VITE est demandé pour récupérer votre colis.',
-                  ),
-                ],
                 if (status == 'IN_DELIVERY' || status == 'DELIVERED')
                   ..._deliveryBlock(o),
-                if (status == 'DELIVERED') ...[
-                  const SizedBox(height: 16),
-                  const StatusBanner(
-                    icon: CupertinoIcons.checkmark_seal_fill,
-                    color: AppColors.success,
-                    title: 'Commande livrée',
-                    text: 'Merci pour votre achat sur Adjamé-Smart.',
-                  ),
-                ],
-                if (status == 'CANCELLED') ...[
-                  const SizedBox(height: 16),
-                  StatusBanner(
-                    icon: CupertinoIcons.xmark_circle_fill,
-                    color: AppColors.muted,
-                    title: 'Commande annulée',
-                    text: o['cancelReason'] as String?,
-                  ),
-                ],
-                if (status == 'FAILED') ...[
-                  const SizedBox(height: 16),
-                  const StatusBanner(
-                    icon: CupertinoIcons.info_circle_fill,
-                    color: AppColors.warning,
-                    title: 'Livraison impossible',
-                    text:
-                        'Le livreur n’a pas pu vous remettre le colis. La boutique va vous contacter.',
-                  ),
-                ],
                 SectionTitle(
                   'Articles (${items.fold<int>(0, (t, i) => t + (i['qty'] as int))})',
                 ),
@@ -1229,11 +1209,12 @@ class _OrderScreenState extends State<OrderScreen> {
                       title: 'Marchandise',
                       value: formatMoney(o['goodsTotal'] as num),
                     ),
-                    Cell(
-                      title: 'Payé à la commande',
-                      value: formatMoney(o['dueNow'] as num),
-                    ),
-                    if ((o['dueOnDelivery'] as num) > 0)
+                    if (paidUpfront && status != 'AWAITING_PAYMENT')
+                      Cell(
+                        title: 'Payé à la commande',
+                        value: formatMoney(o['dueNow'] as num),
+                      ),
+                    if (!inDelivery && (o['dueOnDelivery'] as num) > 0)
                       Cell(
                         title: 'À la livraison',
                         value: formatMoney(o['dueOnDelivery'] as num),
@@ -1270,7 +1251,10 @@ class _OrderScreenState extends State<OrderScreen> {
 
 class ShopOrdersScreen extends StatefulWidget {
   final Map shop;
-  const ShopOrdersScreen({super.key, required this.shop});
+
+  /// Onglet affiché (pas de rafraîchissement automatique quand il est masqué)
+  final bool active;
+  const ShopOrdersScreen({super.key, required this.shop, this.active = true});
   @override
   State<ShopOrdersScreen> createState() => _ShopOrdersScreenState();
 }
@@ -1284,7 +1268,19 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted &&
+          widget.active &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
+        _load();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(ShopOrdersScreen old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active) _load();
   }
 
   @override
@@ -1432,7 +1428,7 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen> {
             const SizedBox(height: 8),
             Text(
               d['error'] != null
-                  ? 'Livreur non demandé : ${d['error']}'
+                  ? 'Le livreur n’est pas encore en route : relancez la demande.'
                   : 'Livreur VITE demandé : préparez le colis.',
               style: AppText.caption.copyWith(color: AppColors.ink),
             ),
@@ -1557,7 +1553,6 @@ class OffersCard extends StatefulWidget {
 class _OffersCardState extends State<OffersCard> {
   List<Map> _offers = [];
   Timer? _poll;
-  Timer? _tick;
   String? _busy;
 
   @override
@@ -1565,15 +1560,11 @@ class _OffersCardState extends State<OffersCard> {
     super.initState();
     _load();
     _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && _offers.isNotEmpty) setState(() {});
-    });
   }
 
   @override
   void dispose() {
     _poll?.cancel();
-    _tick?.cancel();
     super.dispose();
   }
 
@@ -1673,14 +1664,13 @@ class _OffersCardState extends State<OffersCard> {
         const SectionTitle('Propositions des livreurs'),
         for (final o in live) _tile(o),
         const SectionFooter(
-          'Un livreur propose un autre prix que l’estimation. Acceptez, refusez ou faites votre offre : la course reste proposée aux autres livreurs.',
+          'La course reste proposée aux autres livreurs en attendant.',
         ),
       ],
     );
   }
 
   Widget _tile(Map o) {
-    final left = _left(o);
     final countered = o['counterPrice'] != null;
     final canCounter =
         !countered && (o['price'] as num) - 50 >= (o['minCounter'] as num);
@@ -1707,13 +1697,15 @@ class _OffersCardState extends State<OffersCard> {
                       '${o['driver']['name']}',
                       style: AppText.body.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    Text(
-                      [
-                        if (o['etaMin'] != null)
-                          'à ~${o['etaMin']} min de la boutique',
-                        '${left ~/ 60}:${(left % 60).toString().padLeft(2, '0')} pour répondre',
-                      ].join(' · '),
-                      style: AppText.caption,
+                    // Seul le compte à rebours se reconstruit chaque seconde
+                    _Countdown(
+                      expiresAt: o['expiresAt'] as String,
+                      prefix: o['etaMin'] != null
+                          ? 'à ~${o['etaMin']} min de la boutique · '
+                          : '',
+                      onExpired: () {
+                        if (mounted) setState(() {});
+                      },
                     ),
                   ],
                 ),
@@ -1758,12 +1750,68 @@ class _OffersCardState extends State<OffersCard> {
                 ),
                 child: busy
                     ? const CupertinoActivityIndicator(color: Colors.white)
-                    : Text('Accepter ${formatMoney(o['price'] as num)}'),
+                    : const Text('Accepter'),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Temps restant pour répondre à une proposition (rafraîchi seul, chaque seconde)
+class _Countdown extends StatefulWidget {
+  final String expiresAt;
+  final String prefix;
+  final VoidCallback onExpired;
+  const _Countdown({
+    required this.expiresAt,
+    required this.prefix,
+    required this.onExpired,
+  });
+  @override
+  State<_Countdown> createState() => _CountdownState();
+}
+
+class _CountdownState extends State<_Countdown> {
+  late DateTime _end = DateTime.parse(widget.expiresAt);
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_end.isBefore(DateTime.now())) {
+        _tick?.cancel();
+        widget.onExpired();
+      } else {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_Countdown old) {
+    super.didUpdateWidget(old);
+    if (old.expiresAt != widget.expiresAt) {
+      _end = DateTime.parse(widget.expiresAt);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final left = _end.difference(DateTime.now()).inSeconds.clamp(0, 9999);
+    return Text(
+      '${widget.prefix}${left ~/ 60}:${(left % 60).toString().padLeft(2, '0')} pour répondre',
+      style: AppText.caption,
     );
   }
 }

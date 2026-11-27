@@ -94,9 +94,12 @@ class ProductCard extends StatelessWidget {
                   Positioned(
                     left: 7,
                     bottom: 7,
-                    child: Glass(
-                      radius: BorderRadius.circular(14),
-                      opacity: 0.78,
+                    // Pastille pleine : pas de flou par carte (défilement fluide des grilles)
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 9,
@@ -233,9 +236,9 @@ class CatalogResults extends StatelessWidget {
         else if (c.failed && c.items.isEmpty)
           SliverToBoxAdapter(
             child: EmptyState(
-              icon: CupertinoIcons.wifi_slash,
-              title: 'Pas de connexion',
-              text: 'Vérifiez votre connexion Internet puis réessayez.',
+              icon: CupertinoIcons.arrow_clockwise,
+              title: 'Un petit instant',
+              text: 'Les produits arrivent, réessayez dans un instant.',
               action: 'Réessayer',
               onAction: c.reload,
             ),

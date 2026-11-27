@@ -34,9 +34,23 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-const _generic = 'Une erreur est survenue. Réessayez dans un instant.';
-const _offline =
-    'Impossible de joindre Adjamé-Smart. Vérifiez votre connexion.';
+/// Messages génériques : rassurants, sans détail technique
+const _generic = 'On s’en occupe : réessayez dans un instant.';
+const _offline = 'Connexion un peu lente : réessayez dans un instant.';
+
+/// Détails internes (service tiers, configuration, messages techniques en anglais) :
+/// jamais montrés tels quels, remplacés par le message générique
+final _technical = RegExp(
+  r'injoignable|non configur|\bAPI\b|\bHTTP\b|signature|\brôle\b|erreur|error|exception|'
+  r'\b(must|should|property|cannot|invalid|internal|unauthorized|forbidden|not found|bad request)\b',
+  caseSensitive: false,
+);
+
+String _friendly(Object? m) {
+  final text = m is List ? m.join('\n') : (m is String ? m.trim() : '');
+  if (text.isEmpty || _technical.hasMatch(text)) return _generic;
+  return text;
+}
 
 /// Session : écoutable (l'onglet Compte se met à jour à la connexion / déconnexion)
 class Api extends ChangeNotifier {
@@ -89,10 +103,7 @@ class Api extends ChangeNotifier {
       await logout();
     }
     if (res.statusCode >= 500) throw ApiException(_generic);
-    final m = data is Map ? data['message'] : null;
-    throw ApiException(
-      m is List ? m.join('\n') : (m is String && m.isNotEmpty ? m : _generic),
-    );
+    throw ApiException(_friendly(data is Map ? data['message'] : null));
   }
 
   /// GET mis en cache [ttl] (le prix de gros dépend du compte : cache vidé à la connexion)
@@ -310,10 +321,11 @@ class Api extends ChangeNotifier {
       );
       final data = jsonDecode(utf8.decode(res.bodyBytes));
       if (res.statusCode >= 300) {
+        final m = _friendly(data is Map ? data['message'] : null);
         throw ApiException(
-          data is Map && data['message'] is String
-              ? data['message']
-              : 'Envoi de la photo impossible. Réessayez.',
+          m == _generic
+              ? 'La photo n’est pas encore partie : réessayez dans un instant.'
+              : m,
         );
       }
       return data['url'] as String;

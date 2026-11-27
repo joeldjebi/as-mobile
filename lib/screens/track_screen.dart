@@ -64,7 +64,10 @@ mixin _Polling<T extends StatefulWidget> on State<T> {
 
   void startPolling() {
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 8), (_) => _load());
+    // Pas d'appel en double quand un autre écran (suivi plein écran) le recouvre
+    _timer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? true)) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -371,7 +374,7 @@ class _TrackScreenState extends State<TrackScreen> with _Polling {
                 ? Center(
                     child: unavailable
                         ? Text(
-                            'Suivi indisponible pour le moment',
+                            'Le suivi arrive dans un instant',
                             style: AppText.caption,
                           )
                         : const Loader(),

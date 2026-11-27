@@ -32,7 +32,10 @@ void showError(BuildContext context, Object e) {
   HapticFeedback.lightImpact();
   _toast(
     context,
-    e.toString().replaceFirst('Exception: ', ''),
+    // Messages prévus pour l'utilisateur ; tout imprévu reste discret
+    e is String || e is ApiException
+        ? e.toString()
+        : 'On s’en occupe : réessayez dans un instant.',
     CupertinoIcons.info_circle_fill,
   );
 }
@@ -303,10 +306,13 @@ class WaxPattern extends StatelessWidget {
     this.seed = 0,
     this.child,
   });
+  // Motif peint une fois puis réutilisé au défilement et aux animations
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _WaxPainter(background, ink, accent, seed),
-    child: child,
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(
+      painter: _WaxPainter(background, ink, accent, seed),
+      child: child,
+    ),
   );
 }
 
@@ -355,7 +361,8 @@ class _WaxPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WaxPainter o) => o.bg != bg || o.seed != seed;
+  bool shouldRepaint(_WaxPainter o) =>
+      o.bg != bg || o.ink != ink || o.accent != accent || o.seed != seed;
 }
 
 /// Puce de filtre (Trier, Prix, Marché…) : pleine quand le filtre est actif
