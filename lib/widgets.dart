@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -131,23 +132,176 @@ class _PressableState extends State<Pressable> {
   );
 }
 
-/// Image réseau avec fond neutre pendant le chargement et en cas d'erreur
+/// Image réseau : miniature à la bonne taille, gardée sur le téléphone (disque + mémoire), fondu discret.
+/// [width] = largeur affichée en points ; [preview] = miniature déjà chargée affichée en attendant.
 class NetImage extends StatelessWidget {
   final String? path;
   final BoxFit fit;
   final IconData placeholder;
-  const NetImage(this.path, {super.key, this.fit = BoxFit.cover, this.placeholder = CupertinoIcons.photo});
+  final double width;
+  final double? previewWidth;
+  const NetImage(this.path, {super.key, this.fit = BoxFit.cover, this.placeholder = CupertinoIcons.photo, this.width = 200, this.previewWidth});
   @override
   Widget build(BuildContext context) {
     final empty = Container(color: AppColors.surfaceAlt, alignment: Alignment.center, child: Icon(placeholder, color: AppColors.faint, size: 28));
     if (path == null || path!.isEmpty) return empty;
-    return Image.network(
-      photoUrl(path!),
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 3;
+    final px = (width * dpr).round();
+    Widget preview(BuildContext c) => previewWidth == null
+        ? Container(color: AppColors.surfaceAlt)
+        : CachedNetworkImage(imageUrl: thumbUrl(path!, (previewWidth! * dpr).round()), fit: fit, fadeInDuration: Duration.zero, placeholder: (_, _) => Container(color: AppColors.surfaceAlt), errorWidget: (_, _, _) => empty);
+    return CachedNetworkImage(
+      imageUrl: thumbUrl(path!, px),
       fit: fit,
-      frameBuilder: (_, child, frame, sync) => sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: const Duration(milliseconds: 250), child: frame == null ? empty : child),
-      errorBuilder: (_, _, _) => empty,
+      memCacheWidth: px,
+      fadeInDuration: const Duration(milliseconds: 160),
+      fadeOutDuration: Duration.zero,
+      placeholder: (c, _) => preview(c),
+      errorWidget: (_, _, _) => empty,
     );
   }
+}
+
+/// Bloc gris en attendant le contenu (pulsation lente, sans dégradé)
+class Skeleton extends StatefulWidget {
+  final double? width;
+  final double height;
+  final double radius;
+  const Skeleton({super.key, this.width, required this.height, this.radius = 10});
+  @override
+  State<Skeleton> createState() => _SkeletonState();
+}
+
+class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: Tween(begin: 1.0, end: 0.55).animate(_c),
+    child: Container(width: widget.width, height: widget.height, decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(widget.radius))),
+  );
+}
+
+/// Grille de cartes produit fantômes (premier chargement)
+class ProductGridSkeleton extends StatelessWidget {
+  final int count;
+  const ProductGridSkeleton({super.key, this.count = 4});
+  @override
+  Widget build(BuildContext context) => SliverGrid.builder(
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 20, crossAxisSpacing: 12, childAspectRatio: 0.56),
+    itemCount: count,
+    itemBuilder: (_, _) => const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      AspectRatio(aspectRatio: 4 / 5, child: Skeleton(height: double.infinity, radius: 14)),
+      SizedBox(height: 10),
+      Skeleton(height: 13, width: 120),
+      SizedBox(height: 6),
+      Skeleton(height: 13, width: 70),
+    ]),
+  );
+}
+
+/// Motif inspiré des pagnes wax (formes géométriques à plat, couleurs de la marque) : identité visuelle
+class WaxPattern extends StatelessWidget {
+  final Color background;
+  final Color ink;
+  final Color accent;
+  final int seed;
+  final Widget? child;
+  const WaxPattern({super.key, this.background = AppColors.primary, this.ink = const Color(0x2EFFFFFF), this.accent = AppColors.accent, this.seed = 0, this.child});
+  @override
+  Widget build(BuildContext context) => CustomPaint(painter: _WaxPainter(background, ink, accent, seed), child: child);
+}
+
+class _WaxPainter extends CustomPainter {
+  final Color bg, ink, accent;
+  final int seed;
+  _WaxPainter(this.bg, this.ink, this.accent, this.seed);
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+    final line = Paint()..color = ink..style = PaintingStyle.stroke..strokeWidth = 2.2;
+    final dot = Paint()..color = ink;
+    final hot = Paint()..color = accent;
+    const step = 46.0;
+    var row = 0;
+    for (var y = -step / 2; y < size.height + step; y += step * 0.86, row++) {
+      var col = 0;
+      for (var x = (row.isOdd ? step / 2 : 0.0) - step / 2; x < size.width + step; x += step, col++) {
+        final c = Offset(x, y);
+        final k = (row * 7 + col * 3 + seed) % 5;
+        if (k == 0) {
+          // Cercles concentriques (motif « œil »)
+          canvas.drawCircle(c, 14, line);
+          canvas.drawCircle(c, 6, (row + col + seed) % 4 == 0 ? hot : dot);
+        } else if (k == 1 || k == 3) {
+          // Losange
+          final path = Path()..moveTo(c.dx, c.dy - 12)..lineTo(c.dx + 12, c.dy)..lineTo(c.dx, c.dy + 12)..lineTo(c.dx - 12, c.dy)..close();
+          canvas.drawPath(path, line);
+        } else {
+          canvas.drawCircle(c, 3, dot);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WaxPainter o) => o.bg != bg || o.seed != seed;
+}
+
+/// Puce de filtre (Trier, Prix, Marché…) : pleine quand le filtre est actif
+class FilterPill extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final bool dropdown;
+  final IconData? icon;
+  const FilterPill(this.label, {super.key, required this.onTap, this.active = false, this.dropdown = true, this.icon});
+  @override
+  Widget build(BuildContext context) => Pressable(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      decoration: BoxDecoration(color: active ? AppColors.ink : AppColors.surface, borderRadius: BorderRadius.circular(17), border: Border.all(color: active ? AppColors.ink : AppColors.line)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) ...[Icon(icon, size: 15, color: active ? Colors.white : AppColors.ink), const SizedBox(width: 6)],
+        Text(label, style: AppText.subhead.copyWith(fontSize: 14, fontWeight: FontWeight.w500, color: active ? Colors.white : AppColors.ink)),
+        if (dropdown) ...[const SizedBox(width: 4), Icon(CupertinoIcons.chevron_down, size: 12, color: active ? Colors.white : AppColors.muted)],
+      ]),
+    ),
+  );
+}
+
+/// En-tête collant (filtres qui restent visibles pendant le défilement)
+class StickyHeader extends SliverPersistentHeaderDelegate {
+  final double height;
+  final Widget child;
+  final Color background;
+  StickyHeader({required this.height, required this.child, this.background = AppColors.surface});
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ClipRect(
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: Container(
+        height: height,
+        color: background.withValues(alpha: 0.9),
+        foregroundDecoration: BoxDecoration(border: Border(bottom: BorderSide(color: overlapsContent || shrinkOffset > 0 ? AppColors.separator : Colors.transparent, width: 0.5))),
+        child: child,
+      ),
+    ),
+  );
+  @override
+  bool shouldRebuild(StickyHeader o) => true;
 }
 
 /// En-tête de section : titre gras + « Tout voir »

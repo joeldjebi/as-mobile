@@ -42,7 +42,7 @@ class CartScreen extends StatelessWidget {
   Widget _line(CartItem i) => Padding(
     padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 68, height: 68, child: NetImage(i.photo))),
+      ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 68, height: 68, child: NetImage(i.photo, width: 68))),
       const SizedBox(width: 12),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

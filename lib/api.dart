@@ -18,6 +18,13 @@ final String apiUrl = _defined.isNotEmpty
 
 String photoUrl(String path) => path.startsWith('http') ? path : '$apiUrl$path';
 
+/// Miniature servie par l'API (WebP à la largeur demandée : 240, 480, 800 ou 1200)
+String thumbUrl(String path, int width) {
+  if (!path.startsWith('/uploads/')) return photoUrl(path);
+  final w = width <= 240 ? 240 : width <= 480 ? 480 : width <= 800 ? 800 : 1200;
+  return '$apiUrl$path?w=$w';
+}
+
 /// Erreur à montrer telle quelle (message clair en français)
 class ApiException implements Exception {
   final String message;
@@ -37,6 +44,10 @@ class Api extends ChangeNotifier {
 
   String? _token;
   Map<String, dynamic>? user;
+  /// Connexion réutilisée (keep-alive) : chaque appel évite une nouvelle poignée de main
+  final _http = http.Client();
+  /// Réponses récentes du catalogue (retour en arrière instantané)
+  final _cache = <String, (DateTime, dynamic)>{};
   String? get token => _token;
   bool get loggedIn => _token != null && user != null;
 
@@ -62,7 +73,7 @@ class Api extends ChangeNotifier {
         });
       if (body != null) req.body = jsonEncode(body);
       res = await http.Response.fromStream(
-        await req.send().timeout(const Duration(seconds: 25)),
+        await _http.send(req).timeout(const Duration(seconds: 25)),
       );
     } catch (_) {
       throw ApiException(_offline);
@@ -81,7 +92,20 @@ class Api extends ChangeNotifier {
     );
   }
 
+  /// GET mis en cache [ttl] (le prix de gros dépend du compte : cache vidé à la connexion)
+  Future<dynamic> _cached(String path, Duration ttl) async {
+    final hit = _cache[path];
+    if (hit != null && DateTime.now().difference(hit.$1) < ttl) return hit.$2;
+    final data = await _request('GET', path);
+    _cache[path] = (DateTime.now(), data);
+    return data;
+  }
+
+  /// Réponse en cache sans appel réseau (affichage immédiat)
+  dynamic peek(String path) => _cache[path]?.$2;
+
   Future<void> _session(Map<String, dynamic> res) async {
+    _cache.clear();
     _token = res['token'] as String;
     user = res['user'] as Map<String, dynamic>;
     (await SharedPreferences.getInstance()).setString('token', _token!);
@@ -109,6 +133,7 @@ class Api extends ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     user = null;
+    _cache.clear();
     (await SharedPreferences.getInstance()).remove('token');
     notifyListeners();
   }
@@ -121,35 +146,25 @@ class Api extends ChangeNotifier {
       user = await _request('POST', '/auth/me/reseller', body);
 
   // ---------- Catalogue ----------
-  Future<List<dynamic>> categories() async =>
-      await _request('GET', '/categories') as List<dynamic>;
-  Future<List<dynamic>> shops({String? categoryId}) async =>
-      await _request(
-            'GET',
-            '/shops${categoryId == null ? '' : '?categoryId=$categoryId'}',
-          )
-          as List<dynamic>;
-  Future<Map<String, dynamic>> shop(String slug) async =>
-      await _request('GET', '/shops/$slug') as Map<String, dynamic>;
-  Future<List<String>> markets() async =>
-      ((await _request('GET', '/shops/meta'))['markets'] as List)
-          .cast<String>();
+  String _qs(Map<String, String> p) => p.isEmpty ? '' : '?${Uri(queryParameters: p).query}';
+
+  /// Rayons (arbre : chaque rayon a ses sous-rayons dans « children »)
+  Future<List<dynamic>> categories() async => await _cached('/categories', const Duration(minutes: 10)) as List<dynamic>;
+  /// Annuaire des boutiques : q, market, type, categoryId, sort (name|new|popular), page
+  Future<Map<String, dynamic>> shops(Map<String, String> params) async => await _request('GET', '/shops${_qs(params)}') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> shop(String slug) async => await _cached('/shops/$slug', const Duration(minutes: 1)) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> shopsMeta() async => await _cached('/shops/meta', const Duration(minutes: 5)) as Map<String, dynamic>;
+  Future<List<String>> markets() async => ((await shopsMeta())['markets'] as List).cast<String>();
 
   // ---------- Produits (client) ----------
-  Future<Map<String, dynamic>> home() async =>
-      await _request('GET', '/products/home') as Map<String, dynamic>;
-  Future<Map<String, dynamic>> searchProducts(
-    Map<String, String> params,
-  ) async =>
-      await _request(
-            'GET',
-            '/products${params.isEmpty ? '' : '?${Uri(queryParameters: params).query}'}',
-          )
-          as Map<String, dynamic>;
-  Future<Map<String, dynamic>> product(String id) async =>
-      await _request('GET', '/products/$id') as Map<String, dynamic>;
-  Future<void> reportProduct(String id, String reason) async =>
-      _request('POST', '/products/$id/report', {'reason': reason});
+  Future<Map<String, dynamic>> home({bool fresh = false}) async {
+    if (fresh) _cache.remove('/products/home');
+    return await _cached('/products/home', const Duration(seconds: 45)) as Map<String, dynamic>;
+  }
+  Future<Map<String, dynamic>> searchProducts(Map<String, String> params) async => await _request('GET', '/products${_qs(params)}') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> suggest(String q) async => await _cached('/products/suggest${_qs({'q': q})}', const Duration(minutes: 2)) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> product(String id) async => await _request('GET', '/products/$id') as Map<String, dynamic>;
+  Future<void> reportProduct(String id, String reason) async => _request('POST', '/products/$id/report', {'reason': reason});
 
   // ---------- Mes produits (vendeur) ----------
   Future<List<dynamic>> myProducts(String shopId) async =>

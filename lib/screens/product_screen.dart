@@ -99,7 +99,7 @@ class _ProductScreenState extends State<ProductScreen> {
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 56, height: 56, child: NetImage(photo))),
+            ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 56, height: 56, child: NetImage(photo, width: 56))),
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -117,7 +117,7 @@ class _ProductScreenState extends State<ProductScreen> {
           FilledButton(
             onPressed: () {
               Navigator.pop(c);
-              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 2)), (_) => false);
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: HomeScreen.cartTab)), (_) => false);
             },
             child: const Text('Voir le panier'),
           ),
@@ -180,7 +180,7 @@ class _ProductScreenState extends State<ProductScreen> {
                       itemCount: photos.length,
                       onPageChanged: (i) => setState(() => _photo = i),
                       itemBuilder: (_, i) {
-                        final img = NetImage(photos[i]);
+                        final img = NetImage(photos[i], width: 430, previewWidth: 180);
                         return i == 0 ? Hero(tag: 'product-${p['id']}', child: img) : img;
                       },
                     ),
@@ -267,7 +267,7 @@ class _ProductScreenState extends State<ProductScreen> {
               Group(color: AppColors.surfaceAlt, dividerIndent: 60, children: [
                 if (shop != null)
                   Cell(
-                    leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 30, height: 30, child: NetImage(shop['logoUrl'] as String?, placeholder: CupertinoIcons.building_2_fill))),
+                    leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: SizedBox(width: 30, height: 30, child: NetImage(shop['logoUrl'] as String?, width: 30, placeholder: CupertinoIcons.building_2_fill))),
                     title: shop['name'] as String,
                     subtitle: [shop['type'] == 'GROSSISTE' ? 'Grossiste' : 'Boutique', shop['market']].whereType<String>().join(' · '),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShopPage(slug: shop['slug'] as String))),
