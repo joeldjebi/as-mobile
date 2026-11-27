@@ -16,7 +16,13 @@ String photoUrl(String path) => path.startsWith('http') ? path : '$apiUrl$path';
 /// Miniature servie par l'API (WebP à la largeur demandée : 240, 480, 800 ou 1200)
 String thumbUrl(String path, int width) {
   if (!path.startsWith('/uploads/')) return photoUrl(path);
-  final w = width <= 240 ? 240 : width <= 480 ? 480 : width <= 800 ? 800 : 1200;
+  final w = width <= 240
+      ? 240
+      : width <= 480
+      ? 480
+      : width <= 800
+      ? 800
+      : 1200;
   return '$apiUrl$path?w=$w';
 }
 
@@ -39,8 +45,10 @@ class Api extends ChangeNotifier {
 
   String? _token;
   Map<String, dynamic>? user;
+
   /// Connexion réutilisée (keep-alive) : chaque appel évite une nouvelle poignée de main
   final _http = http.Client();
+
   /// Réponses récentes du catalogue (retour en arrière instantané)
   final _cache = <String, (DateTime, dynamic)>{};
   String? get token => _token;
@@ -125,6 +133,7 @@ class Api extends ChangeNotifier {
     user = await _request('GET', '/auth/me');
     notifyListeners();
   }
+
   Future<void> logout() async {
     _token = null;
     user = null;
@@ -141,39 +150,99 @@ class Api extends ChangeNotifier {
       user = await _request('POST', '/auth/me/reseller', body);
 
   // ---------- Catalogue ----------
-  String _qs(Map<String, String> p) => p.isEmpty ? '' : '?${Uri(queryParameters: p).query}';
+  String _qs(Map<String, String> p) =>
+      p.isEmpty ? '' : '?${Uri(queryParameters: p).query}';
 
   /// Rayons (arbre : chaque rayon a ses sous-rayons dans « children »)
-  Future<List<dynamic>> categories() async => await _cached('/categories', const Duration(minutes: 10)) as List<dynamic>;
+  Future<List<dynamic>> categories() async =>
+      await _cached('/categories', const Duration(minutes: 10))
+          as List<dynamic>;
+
   /// Annuaire des boutiques : q, market, type, categoryId, sort (name|new|popular), page
-  Future<Map<String, dynamic>> shops(Map<String, String> params) async => await _request('GET', '/shops${_qs(params)}') as Map<String, dynamic>;
-  Future<Map<String, dynamic>> shop(String slug) async => await _cached('/shops/$slug', const Duration(minutes: 1)) as Map<String, dynamic>;
-  Future<Map<String, dynamic>> shopsMeta() async => await _cached('/shops/meta', const Duration(minutes: 5)) as Map<String, dynamic>;
-  Future<List<String>> markets() async => ((await shopsMeta())['markets'] as List).cast<String>();
+  Future<Map<String, dynamic>> shops(Map<String, String> params) async =>
+      await _request('GET', '/shops${_qs(params)}') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> shop(String slug) async =>
+      await _cached('/shops/$slug', const Duration(minutes: 1))
+          as Map<String, dynamic>;
+  Future<Map<String, dynamic>> shopsMeta() async =>
+      await _cached('/shops/meta', const Duration(minutes: 5))
+          as Map<String, dynamic>;
+  Future<List<String>> markets() async =>
+      ((await shopsMeta())['markets'] as List).cast<String>();
 
   // ---------- Produits (client) ----------
   Future<Map<String, dynamic>> home({bool fresh = false}) async {
     if (fresh) _cache.remove('/products/home');
-    return await _cached('/products/home', const Duration(seconds: 45)) as Map<String, dynamic>;
+    return await _cached('/products/home', const Duration(seconds: 45))
+        as Map<String, dynamic>;
   }
-  Future<Map<String, dynamic>> searchProducts(Map<String, String> params) async => await _request('GET', '/products${_qs(params)}') as Map<String, dynamic>;
-  Future<Map<String, dynamic>> suggest(String q) async => await _cached('/products/suggest${_qs({'q': q})}', const Duration(minutes: 2)) as Map<String, dynamic>;
-  Future<Map<String, dynamic>> product(String id) async => await _request('GET', '/products/$id') as Map<String, dynamic>;
-  Future<void> reportProduct(String id, String reason) async => _request('POST', '/products/$id/report', {'reason': reason});
+
+  Future<Map<String, dynamic>> searchProducts(
+    Map<String, String> params,
+  ) async =>
+      await _request('GET', '/products${_qs(params)}') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> suggest(String q) async =>
+      await _cached(
+            '/products/suggest${_qs({'q': q})}',
+            const Duration(minutes: 2),
+          )
+          as Map<String, dynamic>;
+  Future<Map<String, dynamic>> product(String id) async =>
+      await _request('GET', '/products/$id') as Map<String, dynamic>;
+  Future<void> reportProduct(String id, String reason) async =>
+      _request('POST', '/products/$id/report', {'reason': reason});
 
   // ---------- Commandes ----------
   /// Lignes du panier envoyées au serveur (prix et stocks revérifiés côté serveur)
-  Future<Map<String, dynamic>> orderQuote(Map<String, dynamic> body) async => await _request('POST', '/orders/quote', body) as Map<String, dynamic>;
-  Future<Map<String, dynamic>> checkout(Map<String, dynamic> body) async => await _request('POST', '/orders', body) as Map<String, dynamic>;
-  Future<List<dynamic>> myOrders() async => await _request('GET', '/orders/mine') as List<dynamic>;
-  Future<Map<String, dynamic>> order(String id) async => await _request('GET', '/orders/$id') as Map<String, dynamic>;
-  Future<Map<String, dynamic>> declarePayment(String id, String reference, {String? payerPhone}) async =>
-      await _request('POST', '/orders/mine/$id/payment', {'reference': reference, 'payerPhone': ?payerPhone}) as Map<String, dynamic>;
-  Future<Map<String, dynamic>> cancelOrder(String id) async => await _request('POST', '/orders/mine/$id/cancel') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> orderQuote(Map<String, dynamic> body) async =>
+      await _request('POST', '/orders/quote', body) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> checkout(Map<String, dynamic> body) async =>
+      await _request('POST', '/orders', body) as Map<String, dynamic>;
+  Future<List<dynamic>> myOrders() async =>
+      await _request('GET', '/orders/mine') as List<dynamic>;
+  Future<Map<String, dynamic>> order(String id) async =>
+      await _request('GET', '/orders/$id') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> declarePayment(
+    String id,
+    String reference, {
+    String? payerPhone,
+  }) async =>
+      await _request('POST', '/orders/mine/$id/payment', {
+            'reference': reference,
+            'payerPhone': ?payerPhone,
+          })
+          as Map<String, dynamic>;
+
+  /// Recherche de quartier / lieu (service d'adresses de VITE)
+  Future<List<dynamic>> geoSearch(String q) async =>
+      (await _request('GET', '/geo/search?q=${Uri.encodeQueryComponent(q)}')
+          as List<dynamic>?) ??
+      [];
+
+  /// Adresse et commune d'un point (null si indisponible)
+  Future<Map<String, dynamic>?> geoReverse(double lat, double lng) async =>
+      await _request('GET', '/geo/reverse?lat=$lat&lng=$lng')
+          as Map<String, dynamic>?;
+
+  /// Suivi en direct de la course VITE (livreur, itinéraire, temps restant)
+  Future<Map<String, dynamic>> trackOrder(String id) async =>
+      await _request('GET', '/orders/mine/$id/track') as Map<String, dynamic>;
+  Future<Map<String, dynamic>> cancelOrder(String id) async =>
+      await _request('POST', '/orders/mine/$id/cancel') as Map<String, dynamic>;
   // Boutique
-  Future<List<dynamic>> shopOrders(String shopId) async => await _request('GET', '/orders/shop?shopId=$shopId') as List<dynamic>;
-  Future<Map<String, dynamic>> shopOrderAction(String id, String action, [String? note]) async =>
-      await _request('POST', '/orders/shop/$id/$action', note == null ? null : {'note': note}) as Map<String, dynamic>;
+  Future<List<dynamic>> shopOrders(String shopId) async =>
+      await _request('GET', '/orders/shop?shopId=$shopId') as List<dynamic>;
+  Future<Map<String, dynamic>> shopOrderAction(
+    String id,
+    String action, [
+    String? note,
+  ]) async =>
+      await _request(
+            'POST',
+            '/orders/shop/$id/$action',
+            note == null ? null : {'note': note},
+          )
+          as Map<String, dynamic>;
 
   // ---------- Mes produits (vendeur) ----------
   Future<List<dynamic>> myProducts(String shopId) async =>
